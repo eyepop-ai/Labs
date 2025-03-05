@@ -19,7 +19,7 @@ EyePop.ai simplifies AI integration, whether you're building with **React, Node.
 
 📖 **[Read the Documentation](https://docs.eyepop.ai)**  
 
-▶️ **[Watch Tutorials](https://www.youtube.com/@EyePopAI)**  
+▶️ **[Watch Tutorials](https://www.youtube.com/@EyePopAI/videos)**  
 
 
 
