@@ -6,13 +6,10 @@ const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
  *
  * @type {import('@react-native/metro-config').MetroConfig}
  */
-
 const extraNodeModules = {
   path: require.resolve('path-browserify'),
-  // You can add more shims here if needed:
-  //stream: require.resolve('stream-browserify'),
-  // buffer: require.resolve('buffer'),
-  // util: require.resolve('util'),
+  buffer: require.resolve('buffer'),
+  util: require.resolve('util'),
 };
 
 const config = {

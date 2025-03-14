@@ -1,7 +1,17 @@
+import '@azure/core-asynciterator-polyfill';
 import React, { useState } from "react";
 import { View, Alert, Image, TouchableOpacity, ActivityIndicator, StyleSheet } from "react-native";
 import * as ImagePicker from "react-native-image-picker";
-import EyePop, {ForwardOperatorType, PopComponentType, StreamSource} from '@eyepop.ai/eyepop';
+
+import { ReadableStream } from 'web-streams-polyfill/ponyfill';
+// @ts-ignore
+globalThis.ReadableStream = ReadableStream;
+global.Buffer = require('buffer').Buffer;
+
+import EyePop from '@eyepop.ai/eyepop';
+
+import pino from 'pino';
+const logger = pino({level:"debug", name :"eyepop-lab"})
 
 const VideoPicker = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -20,20 +30,16 @@ const VideoPicker = () => {
       }
 
       const file = picked.assets[0];
-      if(!file) {
+      if(!file || !file.uri) {
         Alert.alert("Error", "No file selected.");
         return;
       }
-
-
-      const popUUID = "ef8d4e147cf641cea7284dc3e6f68517";
-      const apiKey =
-        "AAE_w6lCcrCa27chNAbZO-WdZ0FBQUFBQmwyUFk5bmtLZnJBQ2RFVWVDbzU1MnkwTUMzYXhQWjA4a0ZEczFKWWdONjdRS0NGWUZ5aF90aXVQZ3FrcWdkZWwwUEx6Q0luM0F3b3ItMjdqRmhUQkxyTWVvSndFLWRCUENjZGNlanZhbGhRTDdtV289";
-
       // Initialize the EyePop worker endpoint
       let endpoint = EyePop.workerEndpoint({
-        auth: { secretKey: apiKey },
-        popId: popUUID,
+        auth: { secretKey: process.env.EYEPOP_API_KEY || "" },
+        popId: process.env.EYEPOP_POP_UUID,
+        eyepopUrl: process.env.EYEPOP_URL || undefined,
+        logger: logger
       });
 
       console.log("Connecting to EyePop Endpoint ...");
@@ -51,17 +57,13 @@ const VideoPicker = () => {
       const filePath = file.uri.replace("file://", "");
             
       const results = await endpoint.process({ path: filePath, mimeType: file.type });
-
-      console.log("Type of results:", typeof results);
-      console.log("results.constructor.name:", results?.constructor?.name);
-      console.log("Is async iterable:", Symbol.asyncIterator in results);
-      console.log("Has read method:", typeof results?.read === 'function');
-      console.log("Has next method:", typeof results?.next === 'function');
-
-      
-      //Alert.alert("Success", `${file.type} sent successfully to EyePop!`);
+      console.log("results start");
+      for await (const result of results) {
+        console.log(JSON.stringify(result));
+      }
+      console.log("results end");
+      setIsProcessing(false);
       Alert.alert("Done", `${file.type} check logs for results`);
-      
     } catch (error) {
       console.error("Error:", error);
       Alert.alert("Error", "Failed to send image/video.");

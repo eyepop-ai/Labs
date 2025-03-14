@@ -10,16 +10,14 @@
     "test": "jest"
   },
   "dependencies": {
-    "@eyepop.ai/eyepop": "^1.13.2",
-    "axios": "^1.8.2",
-    "path-browserify": "^1.0.1",
+    "@azure/core-asynciterator-polyfill": "^1.0.2",
+    "@eyepop.ai/eyepop": "^1.14.2",
     "react": "19.0.0",
     "react-native": "0.78.0",
     "react-native-dotenv": "^3.4.11",
     "react-native-fs": "^2.20.0",
     "react-native-image-picker": "^8.2.0",
-    "react-native-permissions": "^5.2.6",
-    "stream-browserify": "^3.0.0"
+    "web-streams-polyfill": "3.3.3"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
