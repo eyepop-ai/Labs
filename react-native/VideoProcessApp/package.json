@@ -11,11 +11,11 @@
   },
   "dependencies": {
     "@azure/core-asynciterator-polyfill": "^1.0.2",
-    "@eyepop.ai/eyepop": "^1.14.2",
+    "@eyepop.ai/eyepop": "1.14.3",
     "react": "19.0.0",
     "react-native": "0.78.0",
     "react-native-dotenv": "^3.4.11",
-    "react-native-fs": "^2.20.0",
+    "react-native-file-access": "3.1.1",
     "react-native-image-picker": "^8.2.0",
     "web-streams-polyfill": "3.3.3"
   },
