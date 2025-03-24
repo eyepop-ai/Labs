@@ -11,9 +11,7 @@
   },
   "dependencies": {
     "@azure/core-asynciterator-polyfill": "^1.0.2",
-    "@eyepop.ai/eyepop": "file:../../../eyepop-sdk-node/eyepop.ai-eyepop-1.15.0.tgz",
-    "@eyepop.ai/eyepop-render-2d": "file:../../../eyepop-sdk-node/eyepop.ai-eyepop-render-2d-1.15.0.tgz",
-    "@eyepop.ai/react-native-eyepop": "file:../../../eyepop-sdk-node/eyepop.ai-react-native-eyepop-1.15.0.tgz",
+    "@eyepop.ai/react-native-eyepop": "1.15.0",
     "axios": "^1.8.2",
     "path-browserify": "^1.0.1",
     "pino": "^8.17.2",
