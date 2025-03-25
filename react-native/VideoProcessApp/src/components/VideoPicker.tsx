@@ -1,17 +1,7 @@
-import '@azure/core-asynciterator-polyfill';
 import React, { useState } from "react";
 import { View, Alert, Image, TouchableOpacity, ActivityIndicator, StyleSheet } from "react-native";
 import * as ImagePicker from "react-native-image-picker";
-
-import { ReadableStream } from 'web-streams-polyfill/ponyfill';
-// @ts-ignore
-globalThis.ReadableStream = ReadableStream;
-global.Buffer = require('buffer').Buffer;
-
-import EyePop from '@eyepop.ai/eyepop';
-
-import pino from 'pino';
-const logger = pino({level:"debug", name :"eyepop-lab"})
+import { EyePop } from '@eyepop.ai/react-native-eyepop';
 
 const VideoPicker = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -39,7 +29,6 @@ const VideoPicker = () => {
         auth: { secretKey: process.env.EYEPOP_API_KEY || "" },
         popId: process.env.EYEPOP_POP_UUID,
         eyepopUrl: process.env.EYEPOP_URL || undefined,
-        logger: logger
       });
 
       console.log("Connecting to EyePop Endpoint ...");
