@@ -1,0 +1,4 @@
+eyepop-sdk
+python-dotenv
+pillow
+matplotlib
