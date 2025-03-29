@@ -4,6 +4,36 @@ This is a new [**React Native**](https://reactnative.dev) project, bootstrapped 
 
 > **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
 
+## Required packages
+
+EyePop provides a ReactNative specific package that replaces some underlying packages to support local 
+file access, WebRTC-based live streaming and uniform networking including fast streamed HTTP request and 
+response bodies. The latter is necessary because the EyePop protocol is designed to operate in streaming 
+mode for all media types and inference responses. 
+
+```shell
+npm i @eyepop.ai/react-native-eyepop --save
+```
+
+In the current version, the application still has to include some extra libraries in their own `package.json`. 
+Although those packages are defined as `peerDependencies`, they will be included, but neither expo nor 
+react-native/cli will autolink their native implementations (_note: there must be a better solution, feedback from ReactNative experts is welcome_).
+
+Theses are all the dependencies to add to the application's `package.json`:
+
+```json
+{
+  "dependencies": {
+    "@eyepop.ai/react-native-eyepop": "1.15.1",
+    "react-native-canvas": "^0.1.40",
+    "react-native-file-access": "^3.1.1",
+    "react-native-polyfill-globals": "^3.1.0",
+    "react-native-tcp-socket": "^6.2.0",
+    "react-native-webrtc": "^124.0.5",
+    "web-streams-polyfill": "^3.3.3"
+  }
+}
+```
 ## Step 0: Prerequisites
 
 Copy the content of `.env.local-sample` into a new file `.env.local` and fill out youe personal EyePop Api Key and Pop Id.
