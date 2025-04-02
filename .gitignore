@@ -14,3 +14,5 @@ node_modules/
 react-native/*/android/build
 react-native/*/android/app/build
 
+python/SortImagesByObject/output/*
+python/SortImagesByObject/input/*
