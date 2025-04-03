@@ -259,6 +259,20 @@ class Processor {
         }
     }
 
+
+    getClosestPrediction(seconds) {
+        if (this.buffer.length === 0) return null
+        return this.buffer.reduce((prev, curr) => {
+            if (!prev) return curr
+            if (!curr.seconds) return prev
+            if (!prev.seconds) return curr
+            return Math.abs(curr.seconds - seconds) < Math.abs(prev.seconds - seconds)
+                ? curr
+                : prev
+        })
+    }
+
+
 }
 
 export default Processor;

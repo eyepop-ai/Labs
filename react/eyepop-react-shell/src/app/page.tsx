@@ -48,6 +48,10 @@ export const processors = [
     name: "(Live) Crop to Person - Detect Person and crop display to them",
     module: () => import("../processors/crop_person"),
   },
+  {
+    name: "(Upload Video) Auto Hightlight to Objects - Detect Object and trim video",
+    module: () => import("../processors/autohighlight_video"),
+  },
 
 ];
 
