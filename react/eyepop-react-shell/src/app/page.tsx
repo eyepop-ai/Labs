@@ -50,10 +50,10 @@ export const processors = [
     module: () => import("../processors/autohighlight_video"),
   },
 
-  {
-    name: "(Edge Runtime - Upload Img) Detect Person Pose",
-    module: () => import("../processors/person_pose_upload_local"),
-  },
+  // {
+  //   name: "(Edge Runtime - Upload Img) Detect Person Pose",
+  //   module: () => import("../processors/person_pose_upload_local"),
+  // },
 
 ];
 
