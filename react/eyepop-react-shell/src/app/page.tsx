@@ -24,10 +24,7 @@ export const processors = [
     name: "(Upload Img/Vid) Detect Person Pose",
     module: () => import("../processors/person_pose"),
   },
-  {
-    name: "(Edge Runtime - Upload Img) Detect Person Pose",
-    module: () => import("../processors/person_pose_upload_local"),
-  },
+  
   //{
   //    name: "(Edge Runtime - Live) Detect Person Pose",
   //    module: () => import("../processors/person_pose_live"),
@@ -51,6 +48,11 @@ export const processors = [
   {
     name: "(Upload Video) Auto Hightlight to Objects - Detect Object and trim video",
     module: () => import("../processors/autohighlight_video"),
+  },
+
+  {
+    name: "(Edge Runtime - Upload Img) Detect Person Pose",
+    module: () => import("../processors/person_pose_upload_local"),
   },
 
 ];
@@ -91,8 +93,18 @@ export default function CameraPage() {
     fetchDevices()
   }, []) // Runs once after the component mounts
 
+  
+
   useEffect(() => {
     startCamera()
+
+    // setInterval(() => {
+    //   if (canvasRef.current) {
+    //     drawPreviewRef.current = true
+    //     drawToCanvas()
+    //     takePhoto()
+    //   }
+    // }, 2000);
     return
 
   }, [facingMode, currentProcessor, isScreenMode]) // Runs when facingMode or currentProcessor changes
@@ -149,7 +161,7 @@ export default function CameraPage() {
     roiCtx.clearRect(0, 0, roiCanvasRef.current.width, roiCanvasRef.current.height)
     roiCtx.strokeStyle = "lightblue"
     roiCtx.lineWidth = 2
-
+    
     roiPointsRef.current.forEach(point => {
       roiCtx.beginPath();
       roiCtx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
@@ -169,32 +181,34 @@ export default function CameraPage() {
 
   }
 
+  const updateFrame = async () => {
+
+    drawRegionOfInterest();
+
+    if (!videoRef.current || !canvasRef.current) return requestAnimationFrame(updateFrame)
+    if (!drawPreviewRef.current) return requestAnimationFrame(updateFrame)
+
+    DrawImage(videoRef.current, videoRef.current.videoWidth, videoRef.current.videoHeight, false)
+    await currentModuleRef.current?.processFrame(ctxRef.current, videoRef.current, roiPointsRef.current)
+
+    if (!currentModuleRef?.current?.endpoint) {
+      setEndpointDisconnected(true)
+      return requestAnimationFrame(updateFrame)
+    }
+
+    setEndpointDisconnected(false)
+
+    requestAnimationFrame(updateFrame)
+  }
+
+
   const drawToCanvas = () => {
     console.log("drawToCanvas", videoRef.current, canvasRef.current, ctxRef.current)
     if (!videoRef.current || !canvasRef.current) return
     const ctx = ctxRef.current
     if (!ctx) return
 
-    const updateFrame = async () => {
-
-      drawRegionOfInterest();
-
-      if (!videoRef.current || !canvasRef.current) return requestAnimationFrame(updateFrame)
-      if (!drawPreviewRef.current) return requestAnimationFrame(updateFrame)
-
-      DrawImage(videoRef.current, videoRef.current.videoWidth, videoRef.current.videoHeight, false)
-      await currentModuleRef.current?.processFrame(ctxRef.current, videoRef.current, roiPointsRef.current)
-
-      if (!currentModuleRef?.current?.endpoint) {
-        setEndpointDisconnected(true)
-        return requestAnimationFrame(updateFrame)
-      }
-
-      setEndpointDisconnected(false)
-
-      requestAnimationFrame(updateFrame)
-    }
-
+    
     canvasRef.current.width = window.innerWidth
     canvasRef.current.height = window.innerHeight
 
@@ -316,8 +330,18 @@ export default function CameraPage() {
     ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight)
   }
 
-  const takePhoto = () => {
+  const takePhoto = async() => {
     if (!canvasRef.current) return
+
+    if (!videoRef.current) return
+
+    if(showReset)
+    {
+
+      drawPreviewRef.current = true
+      await updateFrame()
+
+    }
     canvasRef.current.toBlob(blob => {
       if (blob) processPhoto(blob)
     }, "image/jpeg")
