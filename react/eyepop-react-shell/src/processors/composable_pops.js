@@ -30,6 +30,40 @@ export const ComposablePops = {
             },
         ],
     },
+    Person3DHands: {
+        components: [{
+            type: PopComponentType.INFERENCE,
+            model: 'eyepop.person:latest',
+            categoryName: 'person',
+            forward: {
+                operator: {
+                    type: ForwardOperatorType.CROP,
+                    crop: {
+                        boxPadding: 0.25,
+                        maxItems: 128,
+                    }
+                },
+                targets: [{
+                    type: PopComponentType.INFERENCE,
+                    model: 'eyepop.person.palm:latest',
+                    forward: {
+                        operator: {
+                            type: ForwardOperatorType.CROP,
+                            crop: {
+                                includeClasses: ['hand circumference'],
+                                orientationTargetAngle: -90.0,
+                            }
+                        },
+                        targets: [{
+                            type: PopComponentType.INFERENCE,
+                            model: 'eyepop.person.3d-hand-points:latest',
+                            categoryName: '3d-hand-points'
+                        }]
+                    }
+                }]
+            }
+        }]
+    },
     SAM2: {
         components: [
             {
@@ -112,5 +146,5 @@ export const ComposablePops = {
             },
         ],
     },
-    
+
 };

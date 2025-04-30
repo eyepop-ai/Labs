@@ -221,21 +221,21 @@ class Processor {
         // higher episolon = more simplification
 
         if (!points || points.length < 3) return points; // A line cannot be simplified further
-    
+
         const perpendicularDistance = (point, lineStart, lineEnd) => {
             const x0 = point.x, y0 = point.y;
             const x1 = lineStart.x, y1 = lineStart.y;
             const x2 = lineEnd.x, y2 = lineEnd.y;
-    
+
             const numerator = Math.abs((y2 - y1) * x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1);
             const denominator = Math.sqrt((y2 - y1) ** 2 + (x2 - x1) ** 2);
 
             console.log("perpendicularDistance", numerator, denominator, x0, y0, x1, y1, x2, y2);
             return numerator / denominator;
         };
-    
+
         let maxDistance = 0, index = 0;
-    
+
         for (let i = 1; i < points.length - 1; i++) {
             const distance = perpendicularDistance(points[i], points[0], points[points.length - 1]);
 
@@ -249,11 +249,11 @@ class Processor {
 
         console.log("maxDistance", maxDistance)
 
-    
+
         if (maxDistance > epsilon) {
             const leftSimplified = douglasPeucker(points.slice(0, index + 1), epsilon);
             const rightSimplified = douglasPeucker(points.slice(index), epsilon);
-            return [...leftSimplified.slice(0, -1), ...rightSimplified]; 
+            return [...leftSimplified.slice(0, -1), ...rightSimplified];
         } else {
             return [points[0], points[points.length - 1]];
         }
@@ -272,6 +272,39 @@ class Processor {
         })
     }
 
+    // IndexedDB video cache helpers
+    openDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open("eyepop-video-cache", 1);
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains("videos")) {
+                    db.createObjectStore("videos", { keyPath: "name" });
+                }
+            };
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async cacheVideoResults(name, data) {
+        const db = await this.openDB();
+        const tx = db.transaction("videos", "readwrite");
+        const store = tx.objectStore("videos");
+        store.put({ name, data });
+        return tx.complete;
+    }
+
+    async loadCachedVideoResults(name) {
+        const db = await this.openDB();
+        const tx = db.transaction("videos", "readonly");
+        const store = tx.objectStore("videos");
+        return new Promise((resolve, reject) => {
+            const request = store.get(name);
+            request.onsuccess = () => resolve(request.result?.data || null);
+            request.onerror = () => reject(request.error);
+        });
+    }
 
 }
 
