@@ -50,11 +50,6 @@ export const processors = [
     module: () => import("../processors/autohighlight_video"),
   },
 
-  // {
-  //   name: "(Edge Runtime - Upload Img) Detect Person Pose",
-  //   module: () => import("../processors/person_pose_upload_local"),
-  // },
-
 ];
 
 export default function CameraPage() {
@@ -424,7 +419,7 @@ export default function CameraPage() {
     <div className="relative w-screen h-screen bg-black flex justify-center items-center overflow-hidden">
       <div className={`absolute w-full h-full transition-all ${showLoading ? "blur-md" : ""}`}>
         {/* Hidden Video Element */}
-        <video ref={videoRef} autoPlay playsInline className="hidden" />
+        <video ref={videoRef} autoPlay playsInline loop muted className="hidden" />
 
         {/* Canvas as the background */}
         <canvas
