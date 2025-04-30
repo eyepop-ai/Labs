@@ -30,6 +30,46 @@ export const ComposablePops = {
             },
         ],
     },
+    Person2DandBallandPaddle: {
+        components: [
+            {
+
+                type: PopComponentType.INFERENCE,
+                modelUuid: '068080d5b5da79d88000fe5676e26017',
+                categoryName: 'ball'
+
+            },
+            {
+
+                type: PopComponentType.INFERENCE,
+                modelUuid: '067ab6bf9fa378748000d27827aacafb',
+                categoryName: 'paddle_box'
+
+            },
+            {
+                type: PopComponentType.INFERENCE,
+                model: "eyepop.person:latest",
+                categoryName: "person",
+                //confidenceThreshold: 0.7,
+                forward: {
+                    operator: {
+                        type: ForwardOperatorType.CROP,
+                        crop: {
+                            maxItems: 128
+                        },
+                    },
+                    targets: [
+                        {
+                            type: PopComponentType.INFERENCE,
+                            categoryName: "2d-body-points",
+                            model: "eyepop.person.2d-body-points:latest",
+                            confidenceThreshold: 0.25
+                        },
+                    ],
+                },
+            },
+        ],
+    },
     Person3DHands: {
         components: [{
             type: PopComponentType.INFERENCE,
