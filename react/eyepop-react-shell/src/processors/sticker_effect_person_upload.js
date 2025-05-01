@@ -110,47 +110,6 @@ class StickerPersonProcessor extends Processor {
         });
     }
 
-    async processFrame(canvasContext, video, roi) {
-
-        //console.log('Processing video frame:', video, this.endpoint, this.renderer);
-        if (!this.endpoint) return
-        if (!this.renderer) return
-        if (!video) return
-        if (!video?.currentTime) return
-        if (!this.buffer?.length) return
-
-        const currentTime = video.currentTime;
-        let currentFrame = this.getClosestPrediction(currentTime)
-
-        if (currentFrame) {
-            if (canvasContext.canvas.width !== currentFrame.source_width ||
-                canvasContext.canvas.height !== currentFrame.source_height) {
-                canvasContext.canvas.width = currentFrame.source_width
-                canvasContext.canvas.height = currentFrame.source_height
-            }
-
-            if (!currentFrame.objects || !currentFrame.objects.length > 0)
-                return
-
-            // Filter to most prominent object by area
-            currentFrame = this.getBiggestObjectInScene(currentFrame, "person")
-
-            this.renderer.draw(currentFrame)
-            this.lastPrediction = currentFrame
-        }
-    }
-
-    getClosestPrediction(seconds) {
-        if (this.buffer.length === 0) return null
-        return this.buffer.reduce((prev, curr) => {
-            if (!prev) return curr
-            if (!curr.seconds) return prev
-            if (!prev.seconds) return curr
-            return Math.abs(curr.seconds - seconds) < Math.abs(prev.seconds - seconds)
-                ? curr
-                : prev
-        })
-    }
 
 }
 

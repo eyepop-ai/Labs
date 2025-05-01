@@ -17,10 +17,41 @@ class Processor {
         // Add your processing code here
     }
 
-    processVideo(video, canvasContext, name, roi) {
-        // Implement the logic to process a video
-        console.log('Processing photo:', video);
-        // Add your processing code here
+    async processVideo(video, canvasContext, name, roi) {
+        console.log('Processing video:', video);
+
+        const cachedData = await this.loadCachedVideoResults(video.name);
+        if (cachedData) {
+            this.buffer = cachedData;
+            if (this.buffer.length > 0) {
+                console.log("Using cached video data from IndexedDB.");
+                return;
+            }
+        }
+
+        this.buffer = []
+
+        let results = await this.endpoint.process({
+            file: video
+        })
+
+        console.log("video result:", results)
+
+        for await (let result of results) {
+            canvasContext.width = result.source_width
+            canvasContext.height = result.source_height
+
+            console.log("VIDEO RESULT", result)
+
+            this.buffer.push(result)
+
+            if ('event' in result && result.event.type === 'error') {
+                console.log("VIDEO RESULT", result.event.message)
+            }
+        }
+
+        await this.cacheVideoResults(video.name, this.buffer);
+        console.log("Cached video data in IndexedDB.");
     }
 
     async setCanvasContext(canvasContext, stream) {
