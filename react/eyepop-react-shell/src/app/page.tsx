@@ -79,6 +79,8 @@ export default function CameraPage() {
   const [isScreenMode, setIsScreenMode] = useState<boolean>(false)
   const roiPointsRef = useRef<any[]>([])
   const [promptInput, setPromptInput] = useState("");
+  // Store processed photos: { blob, name }
+  const [savedPhotos, setSavedPhotos] = useState<{ blob: Blob, name: string }[]>([]);
 
   useEffect(() => {
     const fetchDevices = async () => {
@@ -249,6 +251,9 @@ export default function CameraPage() {
       });
     }
 
+    // Save processed image blob and name in state
+    setSavedPhotos(prev => [...prev, { blob: image, name }]);
+
     console.log("Processing photo with:", currentProcessor, image)
     await currentModuleRef.current?.processPhoto(image, ctx, name, roiPointsRef.current)
     roiPointsRef.current = []
@@ -383,7 +388,9 @@ export default function CameraPage() {
     const file = event.target.files?.[0]
     if (file) {
       if (file.type.startsWith("image/")) {
-        processPhoto(file)
+        // Generate a consistent name for the uploaded file
+        const name = file.name || new Date().toISOString().replace(/[:.-]/g, "_") + ".jpg";
+        processPhoto(new File([file], name, { type: file.type }));
       } else if (file.type.startsWith("video/")) {
         processVideo(file)
       } else {
@@ -434,7 +441,11 @@ export default function CameraPage() {
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 currentModuleRef.current?.handlePrompt?.(promptInput);
-                takePhoto();
+                if (savedPhotos.length > 0) {
+                  processPhoto(savedPhotos[savedPhotos.length - 1].blob);
+                } else {
+                  takePhoto();
+                }
               }
             }}
             className="absolute bottom-24 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg border border-gray-300 shadow-md text-black z-50 w-1/2"
