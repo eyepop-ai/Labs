@@ -50,6 +50,12 @@ export const processors = [
     module: () => import("../processors/autohighlight_video"),
   },
 
+  {
+    name: "(Upload Photo) Detect Objects based on prompt",
+    module: () => import("../processors/anythingpop"),
+  },
+
+
 ];
 
 export default function CameraPage() {
@@ -72,6 +78,7 @@ export default function CameraPage() {
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
   const [isScreenMode, setIsScreenMode] = useState<boolean>(false)
   const roiPointsRef = useRef<any[]>([])
+  const [promptInput, setPromptInput] = useState("");
 
   useEffect(() => {
     const fetchDevices = async () => {
@@ -418,6 +425,21 @@ export default function CameraPage() {
   return (
     <div className="relative w-screen h-screen bg-black flex justify-center items-center overflow-hidden">
       <div className={`absolute w-full h-full transition-all ${showLoading ? "blur-md" : ""}`}>
+        {currentModuleRef.current?.hasPrompt && (
+          <input
+            type="text"
+            placeholder="Enter a prompt..."
+            value={promptInput}
+            onChange={(e) => setPromptInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                currentModuleRef.current?.handlePrompt?.(promptInput);
+                takePhoto();
+              }
+            }}
+            className="absolute bottom-24 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg border border-gray-300 shadow-md text-black z-50 w-1/2"
+          />
+        )}
         {/* Hidden Video Element */}
         <video ref={videoRef} autoPlay playsInline loop muted className="hidden" />
 
