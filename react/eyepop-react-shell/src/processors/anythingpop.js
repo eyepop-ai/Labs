@@ -6,6 +6,7 @@ class AnythingProcessor extends Processor {
     buffer = [];
     hasPrompt = true;
     useSegmentation = false;
+    confidenceThreshold = 0.4;
 
     constructor() {
         super();
@@ -31,8 +32,6 @@ class AnythingProcessor extends Processor {
                 ability: 'eyepop.localize-objects:latest',
                 params: {
                     prompts: [
-                        { prompt: 'can', label: 'can' },
-                        { prompt: 'eye glasses', label: 'Glasses' }
                     ]
                 }
             }
@@ -41,9 +40,9 @@ class AnythingProcessor extends Processor {
 
         console.log("AnythingProcessor endpoint after changePop:", this.endpoint);
 
-        if(this.useSegmentation) {
+        if (this.useSegmentation) {
             this.renderer = Render2d.renderer(canvasContext, [
-                Render2d.renderContour(),                
+                Render2d.renderContour(),
             ])
         } else {
             this.renderer = Render2d.renderer(canvasContext, [
@@ -52,8 +51,8 @@ class AnythingProcessor extends Processor {
                 Render2d.renderBox({
                     showClass: true,
                     showTraceId: false,
-                    showNestedClasses: false,
-                    showConfidence: false,
+                    showNestedClasses: true,
+                    showConfidence: true,
                 }),
             ])
         }
@@ -85,6 +84,63 @@ class AnythingProcessor extends Processor {
             // result.objects = result.objects.filter((obj) => {
             //     return obj.confidence > 0.5
             // })
+
+            //draw the text result to the canvas ({
+//     "objects": [
+//         {
+//             "classId": 0,
+//             "classLabel": "thermometer",
+//             "confidence": 0.608,
+//             "height": 35,
+//             "id": 1,
+//             "objects": [
+//                 {
+//                     "category": "text",
+//                     "classId": 0,
+//                     "classLabel": "text",
+//                     "confidence": 0.6078,
+//                     "height": 15.729,
+//                     "id": 3,
+//                     "orientation": 0,
+//                     "texts": [
+//                         {
+//                             "confidence": 0.2553,
+//                             "id": 4,
+//                             "text": "71/"
+//                         }
+//                     ],
+//                     "width": 27.917,
+//                     "x": 214.348,
+//                     "y": 505.997
+//                 }
+//             ],
+//             "orientation": 0,
+//             "width": 52,
+//             "x": 200,
+//             "y": 497
+//         }
+//     ],
+//     "seconds": 0,
+//     "source_height": 830,
+//     "source_id": "ea2f4f0d-3047-11f0-b5eb-0242ac110004",
+//     "source_width": 700,
+//     "system_timestamp": 1747174590796050000,
+//     "timestamp": 0
+// })
+            // const text = result.objects.map((obj) => {
+            //     if (obj.objects && obj.objects.length > 0) {
+            //         return obj.objects.map((subObj) => {
+            //             if (subObj.texts && subObj.texts.length > 0) {
+            //                 return subObj.texts.map((textObj) => {
+            //                     return textObj.text
+            //                 }).join(' ')
+            //             }
+            //             return ''
+            //         }).join(' ')
+            //     }
+            //     return ''
+            // }).join(' ')
+            // console.log("Text result:", text);
 
 
             this.renderer.draw(result)
@@ -137,35 +193,36 @@ class AnythingProcessor extends Processor {
 
         console.log("AnythingProcessor handlePrompt:", prompts);
 
-        if(this.useSegmentation) {
-        await this.endpoint.changePop({ 
-            components: [{
-              type: PopComponentType.INFERENCE,
-              ability: 'eyepop.localize-objects:latest',
-              params: {
-                  prompts: prompts
-                },
-              forward: {
-                operator: {
-                  type: ForwardOperatorType.CROP,
-                },
-                targets: [{
-                  type: PopComponentType.INFERENCE,
-                  model: 'eyepop.sam.small:latest',
-                  forward: {
-                    operator: {
-                      type: ForwardOperatorType.FULL,
+        if (this.useSegmentation) {
+            await this.endpoint.changePop({
+                components: [{
+                    type: PopComponentType.INFERENCE,
+                    ability: 'eyepop.localize-objects:latest',
+                    params: {
+                        prompts: prompts
                     },
-                    targets: [{
-                      type: PopComponentType.CONTOUR_FINDER,
-                      contourType: ContourType.POLYGON,
-                      areaThreshold: 0.005
-                    }]
-                  }
-                }]
-              }
-            }
-          ]});
+                    forward: {
+                        operator: {
+                            type: ForwardOperatorType.CROP,
+                        },
+                        targets: [{
+                            type: PopComponentType.INFERENCE,
+                            model: 'eyepop.sam.small:latest',
+                            forward: {
+                                operator: {
+                                    type: ForwardOperatorType.FULL,
+                                },
+                                targets: [{
+                                    type: PopComponentType.CONTOUR_FINDER,
+                                    contourType: ContourType.POLYGON,
+                                    areaThreshold: 0.005
+                                }]
+                            }
+                        }]
+                    }
+                }
+                ]
+            });
         } else {
             await this.endpoint.changePop({
                 components: [{
@@ -174,8 +231,28 @@ class AnythingProcessor extends Processor {
                     params: {
                         prompts: prompts
                     },
-                    confidenceThreshold: 0.6,
-                }
+                    confidenceThreshold: this.confidenceThreshold,
+                    // forward: {
+                    //     operator: {
+                    //         type: ForwardOperatorType.CROP,
+                    //     },
+                    //     targets: [{
+                    //         type: PopComponentType.INFERENCE,
+                    //         model: 'eyepop.text:latest',
+                    //         categoryName: 'text',
+                    //         forward: {
+                    //             operator: {
+                    //                 type: ForwardOperatorType.CROP,
+                    //             },
+                    //             targets: [{
+                    //                 type: PopComponentType.INFERENCE,
+                    //                 model: 'eyepop.text.recognize.square:latest'
+                    //             }]
+                    //         }
+                    //     }]
+                    // }
+                },
+                
                 ]
             });
         }

@@ -24,7 +24,7 @@ export const processors = [
     name: "(Upload Img/Vid) Detect Person Pose",
     module: () => import("../processors/person_pose"),
   },
-  
+
   //{
   //    name: "(Edge Runtime - Live) Detect Person Pose",
   //    module: () => import("../processors/person_pose_live"),
@@ -81,6 +81,8 @@ export default function CameraPage() {
   const [promptInput, setPromptInput] = useState("");
   // Store processed photos: { blob, name }
   const [savedPhotos, setSavedPhotos] = useState<{ blob: Blob, name: string }[]>([]);
+  // Prompt row visibility
+  const [showPromptRow, setShowPromptRow] = useState(true);
 
   useEffect(() => {
     const fetchDevices = async () => {
@@ -97,7 +99,7 @@ export default function CameraPage() {
     fetchDevices()
   }, []) // Runs once after the component mounts
 
-  
+
 
   useEffect(() => {
     startCamera()
@@ -165,7 +167,7 @@ export default function CameraPage() {
     roiCtx.clearRect(0, 0, roiCanvasRef.current.width, roiCanvasRef.current.height)
     roiCtx.strokeStyle = "lightblue"
     roiCtx.lineWidth = 2
-    
+
     roiPointsRef.current.forEach(point => {
       roiCtx.beginPath();
       roiCtx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
@@ -212,7 +214,7 @@ export default function CameraPage() {
     const ctx = ctxRef.current
     if (!ctx) return
 
-    
+
     canvasRef.current.width = window.innerWidth
     canvasRef.current.height = window.innerHeight
 
@@ -337,13 +339,12 @@ export default function CameraPage() {
     ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight)
   }
 
-  const takePhoto = async() => {
+  const takePhoto = async () => {
     if (!canvasRef.current) return
 
     if (!videoRef.current) return
 
-    if(showReset)
-    {
+    if (showReset) {
 
       drawPreviewRef.current = true
       await updateFrame()
@@ -429,27 +430,89 @@ export default function CameraPage() {
     }
   }, [])
 
+  // Drag and Drop file upload
+  useEffect(() => {
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      if (e.dataTransfer?.files?.length) {
+        const file = e.dataTransfer.files[0];
+        if (file.type.startsWith("image/") || file.type.startsWith("video/")) {
+          handleFileUpload({ target: { files: [file] } } as any);
+        }
+      }
+    };
+
+    const preventDefault = (e: DragEvent) => e.preventDefault();
+
+    window.addEventListener("dragover", preventDefault);
+    window.addEventListener("drop", handleDrop);
+
+    return () => {
+      window.removeEventListener("dragover", preventDefault);
+      window.removeEventListener("drop", handleDrop);
+    };
+  }, []);
+
   return (
     <div className="relative w-screen h-screen bg-black flex justify-center items-center overflow-hidden">
       <div className={`absolute w-full h-full transition-all ${showLoading ? "blur-md" : ""}`}>
-        {currentModuleRef.current?.hasPrompt && (
-          <input
-            type="text"
-            placeholder="Enter a prompt..."
-            value={promptInput}
-            onChange={(e) => setPromptInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                currentModuleRef.current?.handlePrompt?.(promptInput);
-                if (savedPhotos.length > 0) {
-                  processPhoto(savedPhotos[savedPhotos.length - 1].blob);
-                } else {
-                  takePhoto();
+        {currentModuleRef.current?.hasPrompt && showPromptRow && (
+          <>
+            <input
+              type="text"
+              placeholder="Enter a prompt..."
+              value={promptInput}
+              onChange={(e) => setPromptInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  currentModuleRef.current?.handlePrompt?.(promptInput);
+                  if (savedPhotos.length > 0) {
+                    processPhoto(savedPhotos[savedPhotos.length - 1].blob);
+                  } else {
+                    takePhoto();
+                  }
                 }
-              }
-            }}
-            className="absolute bottom-24 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg border border-gray-300 shadow-md text-black z-50 w-1/2"
-          />
+              }}
+              className="absolute bottom-24 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg border border-gray-300 shadow-md text-black z-50 w-1/2"
+            />
+            <div className="absolute bottom-24 right-4 z-50 flex items-center space-x-2 bg-white bg-opacity-90 px-2 py-1 rounded">
+              <label htmlFor="confidence" className="text-black text-sm">Conf:</label>
+              <input
+                type="range"
+                id="confidence"
+                min="0"
+                max="1"
+                step="0.01"
+                defaultValue={currentProcessor?.confidenceThreshold ?? 0.5}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  if (currentModuleRef.current) currentModuleRef.current.confidenceThreshold = val;
+                }}
+                className="w-24"
+              />
+              {/* Hide Prompt button */}
+              <button
+                className="rounded ml-4"
+                onClick={() => setShowPromptRow(false)}
+              >
+                👁️
+              </button>
+            </div>
+          </>
+        )}
+        {/* Show Prompt button, always visible when prompt row is hidden */}
+        {!showPromptRow && currentModuleRef.current?.hasPrompt && (
+
+
+          <div className="absolute bottom-24 right-4 z-50 flex items-center space-x-2 bg-white bg-opacity-90 px-2 py-1 rounded">
+
+            <button
+              className="rounded"
+              onClick={() => setShowPromptRow(true)}
+            >
+              👁️
+            </button>
+          </div>
         )}
         {/* Hidden Video Element */}
         <video ref={videoRef} autoPlay playsInline loop muted className="hidden" />
@@ -559,7 +622,7 @@ export default function CameraPage() {
                   {processor.name}
                 </option>
               ))}
-              
+
             </select>
 
             <button className="mt-4 px-4 py-2 bg-red-500 text-white rounded-md" onClick={() => setShowSettings(false)}>
