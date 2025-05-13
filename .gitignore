@@ -16,3 +16,5 @@ react-native/*/android/app/build
 
 python/SortImagesByObject/output/*
 python/SortImagesByObject/input/*
+python/Detecting Blurry or Noisy Images/inputs/*
+python/Detecting Blurry or Noisy Images/models/*
