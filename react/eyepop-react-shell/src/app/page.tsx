@@ -50,6 +50,11 @@ export const processors = [
     module: () => import("../processors/autohighlight_video"),
   },
 
+  {
+    name: "(Upload Img/Vid) Detect Paddle",
+    module: () => import("../processors/pickleball_check_paddle"),
+  },
+
 ];
 
 export default function CameraPage() {

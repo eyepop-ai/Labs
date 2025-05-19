@@ -4,6 +4,15 @@ import { type } from "os";
 
 
 export const ComposablePops = {
+    Paddle: {
+        components: [
+            {
+                type: PopComponentType.INFERENCE,
+                categoryName: "paddle_spine",
+                modelUuid: '06827a8b29637b5580009bbccf096026',
+            }
+        ],
+    },
     Person2D: {
         components: [
             {
