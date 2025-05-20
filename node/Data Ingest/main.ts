@@ -37,88 +37,102 @@ const { width, height } = getImageDimensions(buffer);
 // Convert the Buffer to a Blob
 const blob = new Blob([buffer], { type: 'image/jpeg' });
 
-// ⛔ Need clarification on how to fetch datasetVersion – SDK docs assume it's already known
-const datasetVersion = undefined; // undefined or a specific version string
-async function run() {
-    let client;
-    try {
-        let client = await EyePop.dataEndpoint({
-            auth: {
-                secretKey: process.env.EYEPOP_API_KEY || 'YOUR_API_KEY',
-            }
-        }).connect();
+function getDatasetVersion(): string | undefined {
+    // ⛔ Need clarification on how to fetch datasetVersion – SDK docs assume it's already known
+    return undefined; // undefined or a specific version string
+}
 
-        // ✅ Upload asset
-        const uploadResult = await client.uploadAsset(datasetUUID, datasetVersion, blob, fileName);
-        console.log('Asset uploaded. UUID:', uploadResult.uuid);
-
-        //wait for the upload to complete
-        while (true) {
-            const asset = await client.getAsset(uploadResult.uuid, datasetUUID, datasetVersion);
-            if (asset.status === AssetStatus.accepted) {
-                console.log('Asset upload completed:', asset);
-                break;
-            }
-            console.log('Asset upload in progress:', asset);
-            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for 5 seconds before checking again
+async function createEyepopClient() {
+    const client = await EyePop.dataEndpoint({
+        auth: {
+            secretKey: process.env.EYEPOP_API_KEY || 'YOUR_API_KEY',
         }
-        console.log('Asset upload completed:', uploadResult);
+    }).connect();
+    return client;
+}
 
-        // ✅ Store ground truth label
-        const points: PredictedKeyPoint[] = [{
-            x: 0.5,
-            y: 0.5,
-            z: undefined,
-            id: 0,
-            confidence: 1,
-            visible: true,
-            classLabel: 'example',
-            category: 'example'
-        }];
+async function uploadAndWaitForAsset(client: any, datasetUUID: string, datasetVersion: string | undefined, blob: Blob, fileName: string) {
+    const uploadResult = await client.uploadAsset(datasetUUID, datasetVersion, blob, fileName);
+    console.log('Asset uploaded. UUID:', uploadResult.uuid);
 
-        const keypoints: PredictedKeyPoints[] = [{
-            category: "example_keypoint",
-            type: "custom-keypoints",
-            points: points,
-        }];
+    //wait for the upload to complete
+    while (true) {
+        const asset = await client.getAsset(uploadResult.uuid, datasetUUID, datasetVersion);
+        if (asset.status === AssetStatus.accepted) {
+            console.log('Asset upload completed:', asset);
+            break;
+        }
+        console.log('Asset upload in progress:', asset);
+        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for 5 seconds before checking again
+    }
+    console.log('Asset upload completed:', uploadResult);
+    return uploadResult;
+}
 
-        const objects: PredictedObject[] = [{
-            id: 1,
-            confidence: 1,
-            classLabel: 'example',
-            category: 'example',
-            traceId: undefined,
-            x: 100,
-            y: 100,
-            width: 200,
-            height: 200,
-            orientation: 0,
-            outline: undefined,
-            contours: undefined,
-            mask: undefined,
-            objects: undefined,
-            classes: undefined,
-            texts: undefined,
-            meshs: undefined,
-            keyPoints: keypoints,
-        }];
+function buildGroundTruth(width: number, height: number): Prediction {
+    const points: PredictedKeyPoint[] = [{
+        x: 0.5,
+        y: 0.5,
+        z: undefined,
+        id: 0,
+        confidence: 1,
+        visible: true,
+        classLabel: 'example',
+        category: 'example'
+    }];
 
-        const objectLabel: Prediction = {
-            source_width: width,
-            source_height: height,
-            objects: objects,
-        };
+    const keypoints: PredictedKeyPoints[] = [{
+        category: "example_keypoint",
+        type: "custom-keypoints",
+        points: points,
+    }];
 
-        await client.updateAssetGroundTruth(uploadResult.uuid, datasetUUID, datasetVersion, objectLabel);
+    const objects: PredictedObject[] = [{
+        id: 1,
+        confidence: 1,
+        classLabel: 'example',
+        category: 'example',
+        traceId: undefined,
+        x: 100,
+        y: 100,
+        width: 200,
+        height: 200,
+        orientation: 0,
+        outline: undefined,
+        contours: undefined,
+        mask: undefined,
+        objects: undefined,
+        classes: undefined,
+        texts: undefined,
+        meshs: undefined,
+        keyPoints: keypoints,
+    }];
+
+    const objectLabel: Prediction = {
+        source_width: width,
+        source_height: height,
+        objects: objects,
+    };
+    return objectLabel;
+}
+
+async function printAssetDetails(client: any, assetUUID: string, datasetUUID: string, datasetVersion: string | undefined) {
+    const asset = await client.getAsset(assetUUID, datasetUUID, datasetVersion, true);
+    console.log('Asset pulled:', asset);
+    console.log('Asset UUID:', asset.uuid);
+    console.dir(asset.annotations, { depth: null });
+}
+
+async function run() {
+    try {
+        const client = await createEyepopClient();
+        const datasetVersion = undefined; // getDatasetVersion();
+        const uploadResult = await uploadAndWaitForAsset(client, datasetUUID, datasetVersion, blob, fileName);
+        const groundTruth = buildGroundTruth(width, height);
+        await client.updateAssetGroundTruth(uploadResult.uuid, datasetUUID, datasetVersion, groundTruth);
         console.log('Ground truth added for asset:', uploadResult.uuid);
-
-        // Pull the asset to verify
-        const asset = await client.getAsset(uploadResult.uuid, datasetUUID, datasetVersion, true);
-        console.log('Asset pulled:', asset);
-        console.log('Asset UUID:', asset.uuid);
-        console.dir(asset.annotations, { depth: null });
-
-        client.disconnect();
+        await printAssetDetails(client, uploadResult.uuid, datasetUUID, datasetVersion);
+        await client.disconnect();
         console.log('Client disconnected');
         process.exit(0);
     } catch (err) {
