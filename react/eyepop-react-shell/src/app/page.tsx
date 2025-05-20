@@ -54,6 +54,11 @@ export const processors = [
     name: "(Upload Photo) Detect Objects based on prompt",
     module: () => import("../processors/anythingpop"),
   },
+  {
+    name: "(Upload Photo) Detect Objects based on prompt, then ask questions of that object.",
+    module: () => import("../processors/visualintelligence"),
+  },
+
 
 
 ];
@@ -460,17 +465,18 @@ export default function CameraPage() {
           <>
             <input
               type="text"
-              placeholder="Enter a prompt..."
+              placeholder={currentModuleRef.current?.promptPlaceholder || "Enter prompt..."}
               value={promptInput}
               onChange={(e) => setPromptInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
-                  currentModuleRef.current?.handlePrompt?.(promptInput);
-                  if (savedPhotos.length > 0) {
-                    processPhoto(savedPhotos[savedPhotos.length - 1].blob);
-                  } else {
-                    takePhoto();
-                  }
+                  currentModuleRef.current?.handlePrompt?.(promptInput).then((result: any) => {
+                    if (savedPhotos.length > 0) {
+                      processPhoto(savedPhotos[savedPhotos.length - 1].blob);
+                    } else {
+                      takePhoto();
+                    }
+                  });
                 }
               }}
               className="absolute bottom-24 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg border border-gray-300 shadow-md text-black z-50 w-1/2"
