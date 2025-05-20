@@ -25,7 +25,8 @@ class PickleballCheckPaddleProcessor extends Processor {
             stopJobs: false
         }).connect()
 
-        this.endpoint.changePop(ComposablePops.Paddle);
+        // this.endpoint.changePop(ComposablePops.Paddle);
+        this.endpoint.changePop(ComposablePops.MiniCargo);
 
         this.renderer = Render2d.renderer(canvasContext, [
             Render2d.renderContour(),
@@ -58,35 +59,95 @@ class PickleballCheckPaddleProcessor extends Processor {
                 canvasContext.canvas.width = result.source_width
                 canvasContext.canvas.height = result.source_height
             }
+            if (!result.objects || !result.objects.length > 0)
+                return
 
-            const paddle = this.getPaddleAngleFromHand(result)
-            console.log("Paddle angle:", paddle);
+            //filter by object.confidence > 0.5
+            result.objects = result.objects.filter(obj => obj.confidence > 0.5)
 
-            console.log("Paddle angle:", paddle);
+            //EXAMPLE RESULT{
+//     "category": "paddle_spine",
+//     "classId": 0,
+//     "classLabel": "paddle spine",
+//     "confidence": 1,
+//     "height": 61.29,
+//     "id": 1,
+//     "keyPoints": [
+//         {
+//             "category": "paddle_spine",
+//             "id": 901,
+//             "points": [
+//                 {
+//                     "id": 2,
+//                     "visible": true,
+//                     "x": 245.314,
+//                     "y": 483.572
+//                 },
+//                 {
+//                     "id": 3,
+//                     "visible": true,
+//                     "x": 245.871,
+//                     "y": 422.281
+//                 }
+//             ]
+//         }
+//     ],
+//     "orientation": 0,
+//     "width": 0.556,
+//     "x": 245.314,
+//     "y": 422.281
+// }
+            //draw the paddle spline from the 2 keypoints in the result.object/keypoints[0].points
+            // for (let i = 0; i < result.objects.length; i++) {
+            //     const paddle = result.objects[i].keyPoints[0].points
+            //     const from = paddle[0]
+            //     const to = paddle[1]
+            //     canvasContext.beginPath();
+            //     canvasContext.moveTo(from.x, from.y);
+            //     canvasContext.lineTo(to.x, to.y);
+            //     canvasContext.strokeStyle = 'red';
+            //     canvasContext.lineWidth = 2;
+            //     canvasContext.stroke();
+            //     canvasContext.closePath();
+            //     //add small white circle at the end of the spine
+            //     canvasContext.beginPath();
+            //     canvasContext.arc(to.x, to.y, 5, 0, 2 * Math.PI);
+            //     canvasContext.fillStyle = 'white';
+            //     canvasContext.fill();
+            //     canvasContext.closePath();
+            //     //add small white circle at the start of the spine
+            //     canvasContext.beginPath();
+            //     canvasContext.arc(from.x, from.y, 5, 0, 2 * Math.PI);
+            //     canvasContext.fillStyle = 'white';
+            //     canvasContext.fill();
+            //     canvasContext.closePath();
+            // }
 
-            //draw the paddle angle from spine
-            if (paddle) {
-                const { angle, spine } = paddle;
-                const { from, to } = spine;
-                canvasContext.beginPath();
-                canvasContext.moveTo(from.x, from.y);
-                canvasContext.lineTo(to.x, to.y);
-                canvasContext.strokeStyle = 'red';
-                canvasContext.lineWidth = 2;
-                canvasContext.stroke();
-                canvasContext.closePath();
-
-                //add small white circle at the end of the spine
-                canvasContext.beginPath();
-                canvasContext.arc(to.x, to.y, 5, 0, 2 * Math.PI);
-                canvasContext.fillStyle = 'white';
-                canvasContext.fill();
-
-                canvasContext.closePath();
+            //render all points in the result.object/keypoints[0].points
+            for (let i = 0; i < result.objects.length; i++) {
+                const paddle = result.objects[i].keyPoints[0].points
+                for (let j = 0; j < paddle.length; j++) {
+                    const points = paddle.map(p => ({ x: p.x, y: p.y }));
+                    if (points.length > 2) {
+                        canvasContext.beginPath();
+                        canvasContext.moveTo(points[0].x, points[0].y);
+                        for (let k = 1; k < points.length; k++) {
+                            canvasContext.lineTo(points[k].x, points[k].y);
+                        }
+                        canvasContext.closePath();
+                        canvasContext.strokeStyle = 'blue';
+                        canvasContext.lineWidth = 2;
+                        canvasContext.stroke();
+                        canvasContext.fillStyle = 'rgba(0, 0, 255, 0.2)';
+                        canvasContext.fill();
+                    }
+                }
             }
+            
+                
 
 
-            this.renderer.draw(result)
+            //this.renderer.draw(result)
 
 
         }

@@ -4,12 +4,24 @@ import { type } from "os";
 
 
 export const ComposablePops = {
+    
+    MiniCargo: {
+        components: [
+            {
+                type: PopComponentType.INFERENCE,
+                categoryName: "minicargo",
+                //model: 'customer.pickleball:0.0.1',
+                modelUuid:'06812aeef64b7665800006bdbcc66fc5'
+            }
+        ],
+    },
     Paddle: {
         components: [
             {
                 type: PopComponentType.INFERENCE,
                 categoryName: "paddle_spine",
-                modelUuid: '06827a8b29637b5580009bbccf096026',
+                model: 'customer.pickleball:0.0.1',
+                //modelUuid:'0682bb49f81f7a3780006c8a441b9a8d'
             }
         ],
     },
