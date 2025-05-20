@@ -1,0 +1,16 @@
+{
+  "type": "module",
+  "dependencies": {
+    "@eyepop.ai/eyepop": "^1.17.3",
+    "dotenv": "^16.5.0",
+    "image-size": "^2.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.20",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  },
+  "scripts": {
+    "start": "node --loader ts-node/esm main.ts"
+  }
+}
