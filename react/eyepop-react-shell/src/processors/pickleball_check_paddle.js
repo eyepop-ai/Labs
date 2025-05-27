@@ -26,7 +26,9 @@ class PickleballCheckPaddleProcessor extends Processor {
         }).connect()
 
         // this.endpoint.changePop(ComposablePops.Paddle);
-        this.endpoint.changePop(ComposablePops.MiniCargo);
+        this.endpoint.changePop(ComposablePops.Paddle);
+
+        console.log("Pop:", ComposablePops.Paddle);
 
         this.renderer = Render2d.renderer(canvasContext, [
             Render2d.renderContour(),
@@ -62,7 +64,6 @@ class PickleballCheckPaddleProcessor extends Processor {
             if (!result.objects || !result.objects.length > 0)
                 return
 
-            //filter by object.confidence > 0.5
             result.objects = result.objects.filter(obj => obj.confidence > 0.5)
 
             //EXAMPLE RESULT{
@@ -98,51 +99,51 @@ class PickleballCheckPaddleProcessor extends Processor {
 //     "y": 422.281
 // }
             //draw the paddle spline from the 2 keypoints in the result.object/keypoints[0].points
-            // for (let i = 0; i < result.objects.length; i++) {
-            //     const paddle = result.objects[i].keyPoints[0].points
-            //     const from = paddle[0]
-            //     const to = paddle[1]
-            //     canvasContext.beginPath();
-            //     canvasContext.moveTo(from.x, from.y);
-            //     canvasContext.lineTo(to.x, to.y);
-            //     canvasContext.strokeStyle = 'red';
-            //     canvasContext.lineWidth = 2;
-            //     canvasContext.stroke();
-            //     canvasContext.closePath();
-            //     //add small white circle at the end of the spine
-            //     canvasContext.beginPath();
-            //     canvasContext.arc(to.x, to.y, 5, 0, 2 * Math.PI);
-            //     canvasContext.fillStyle = 'white';
-            //     canvasContext.fill();
-            //     canvasContext.closePath();
-            //     //add small white circle at the start of the spine
-            //     canvasContext.beginPath();
-            //     canvasContext.arc(from.x, from.y, 5, 0, 2 * Math.PI);
-            //     canvasContext.fillStyle = 'white';
-            //     canvasContext.fill();
-            //     canvasContext.closePath();
-            // }
-
-            //render all points in the result.object/keypoints[0].points
             for (let i = 0; i < result.objects.length; i++) {
                 const paddle = result.objects[i].keyPoints[0].points
-                for (let j = 0; j < paddle.length; j++) {
-                    const points = paddle.map(p => ({ x: p.x, y: p.y }));
-                    if (points.length > 2) {
-                        canvasContext.beginPath();
-                        canvasContext.moveTo(points[0].x, points[0].y);
-                        for (let k = 1; k < points.length; k++) {
-                            canvasContext.lineTo(points[k].x, points[k].y);
-                        }
-                        canvasContext.closePath();
-                        canvasContext.strokeStyle = 'blue';
-                        canvasContext.lineWidth = 2;
-                        canvasContext.stroke();
-                        canvasContext.fillStyle = 'rgba(0, 0, 255, 0.2)';
-                        canvasContext.fill();
-                    }
-                }
+                const from = paddle[0]
+                const to = paddle[1]
+                canvasContext.beginPath();
+                canvasContext.moveTo(from.x, from.y);
+                canvasContext.lineTo(to.x, to.y);
+                canvasContext.strokeStyle = 'red';
+                canvasContext.lineWidth = 2;
+                canvasContext.stroke();
+                canvasContext.closePath();
+                //add small white circle at the end of the spine
+                canvasContext.beginPath();
+                canvasContext.arc(to.x, to.y, 5, 0, 2 * Math.PI);
+                canvasContext.fillStyle = 'white';
+                canvasContext.fill();
+                canvasContext.closePath();
+                //add small white circle at the start of the spine
+                canvasContext.beginPath();
+                canvasContext.arc(from.x, from.y, 5, 0, 2 * Math.PI);
+                canvasContext.fillStyle = 'white';
+                canvasContext.fill();
+                canvasContext.closePath();
             }
+
+            //render all points in the result.object/keypoints[0].points
+            // for (let i = 0; i < result.objects.length; i++) {
+            //     const paddle = result.objects[i].keyPoints[0].points
+            //     for (let j = 0; j < paddle.length; j++) {
+            //         const points = paddle.map(p => ({ x: p.x, y: p.y }));
+            //         if (points.length > 2) {
+            //             canvasContext.beginPath();
+            //             canvasContext.moveTo(points[0].x, points[0].y);
+            //             for (let k = 1; k < points.length; k++) {
+            //                 canvasContext.lineTo(points[k].x, points[k].y);
+            //             }
+            //             canvasContext.closePath();
+            //             canvasContext.strokeStyle = 'blue';
+            //             canvasContext.lineWidth = 2;
+            //             canvasContext.stroke();
+            //             canvasContext.fillStyle = 'rgba(0, 0, 255, 0.2)';
+            //             canvasContext.fill();
+            //         }
+            //     }
+            // }
             
                 
 

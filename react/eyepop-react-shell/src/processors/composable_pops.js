@@ -15,13 +15,24 @@ export const ComposablePops = {
             }
         ],
     },
+    PaddleStaging: {
+        components: [
+            {
+                type: PopComponentType.INFERENCE,
+                categoryName: "paddle_spine",
+                //model: 'customer.pickleball:0.0.1',
+                modelUuid:'0682f61cad9e703e80009d9c69ff208b'
+                //modelUuid:'0682bb49f81f7a3780006c8a441b9a8d'
+            }
+        ],
+    },
+
     Paddle: {
         components: [
             {
                 type: PopComponentType.INFERENCE,
                 categoryName: "paddle_spine",
-                model: 'customer.pickleball:0.0.1',
-                //modelUuid:'0682bb49f81f7a3780006c8a441b9a8d'
+                model: 'cg1-solutions.pickleball.paddle.spine:latest',
             }
         ],
     },
@@ -92,7 +103,13 @@ export const ComposablePops = {
         ],
     },
     Person3DHands: {
-        components: [{
+        components: [
+            {
+                type: PopComponentType.INFERENCE,
+                categoryName: "paddle_spine",
+                model: 'cg1-solutions.pickleball.paddle.spine:latest',
+            },
+            {
             type: PopComponentType.INFERENCE,
             model: 'eyepop.person:latest',
             categoryName: 'person',
