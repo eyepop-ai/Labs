@@ -139,6 +139,9 @@ export default function CameraPage() {
       const m = await currentProcessor.module()
       currentModuleRef.current = new m.default()
 
+      if(currentModuleRef.current.promptPlaceholder)
+        setPromptInput(currentModuleRef.current.promptPlaceholder || "")
+
       if (videoRef.current) {
         videoRef.current.srcObject = newStream
         videoRef.current.onloadedmetadata = async () => {
