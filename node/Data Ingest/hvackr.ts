@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import imageSize from 'image-size';
 import axios from 'axios';
+import sharp from 'sharp';
 
 
 
@@ -138,11 +139,14 @@ function createGroundTruthFromPolygons(entry: any, image: any, width: number, he
 
     const objects: PredictedObject[] = [];
 
+    const cropBoxX = image.cropBox?.x1 ?? 0;
+    const cropBoxY = image.cropBox?.y1 ?? 0;
+
     console.log(`Processing polygons for entry: ${entry.id}`);
     for (const polygon of entry.polygons) {
         const normalizedPoints: PredictedKeyPoint[] = polygon.map((point: { x: any; y: any }) => ({
-            x: point.x - image.position.x,
-            y: point.y - image.position.y,
+            x: point.x - image.position.x - cropBoxX,
+            y: point.y - image.position.y - cropBoxY,
             z: undefined,
             id: 0,
             confidence: 1,
@@ -230,8 +234,38 @@ async function run() {
                 fs.writeFileSync(outputPath, response.data);
                 console.log(`Image saved to ${outputPath}`);
 
-                const { blob, fileName, width, height } = prepareAsset(outputPath);
+                let { blob, fileName, width, height } = prepareAsset(outputPath);
                 console.log(`Preparing asset: ${fileName} (${width}x${height})`);
+
+                //crop the image to the cropbox
+                if (image.cropBox) {
+                    const cropbox = image.cropBox;
+
+                    console.log('Crop box found:', cropbox);
+
+                    const cropX = Math.floor(Math.min(cropbox.x1, cropbox.x2));
+                    const cropY = Math.floor(Math.min(cropbox.y1, cropbox.y2));
+                    const cropboxWidth = Math.floor(Math.abs(cropbox.x2 - cropbox.x1));
+                    const cropboxHeight = Math.floor(Math.abs(cropbox.y2 - cropbox.y1));
+
+                    console.log(`Cropping image to (${cropX}, ${cropY}, ${cropboxWidth}, ${cropboxHeight})...`);
+
+                    const croppedOutputPath = path.resolve(__dirname, './input', path.basename(outputPath, path.extname(outputPath)) + '_crop.jpg');
+                    await sharp(outputPath)
+                        .extract({ left: cropX, top: cropY, width: cropboxWidth, height: cropboxHeight })
+                        .toFile(croppedOutputPath);
+                    console.log(`Image cropped and saved to ${croppedOutputPath}`);
+
+                    const croppedBuffer = fs.readFileSync(croppedOutputPath);
+                    const croppedDimensions = getImageDimensions(croppedBuffer);
+                    blob = new Blob([croppedBuffer], { type: 'image/jpeg' });
+                    fileName = path.basename(croppedOutputPath);
+                    width = croppedDimensions.width;
+                    height = croppedDimensions.height;
+
+                } else {
+                    console.log('No crop box found, using original image');
+                }
 
                 const uploadResult = await uploadAndWaitForAsset(client, datasetUUID, datasetVersion, blob, fileName);
 

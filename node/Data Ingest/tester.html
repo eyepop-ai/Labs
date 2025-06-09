@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>EyePop Viewer</title>
+        <style>
+            body {
+                background: #222;
+                margin: 0;
+                color: #fff;
+                font-family: sans-serif;
+            }
+            #input-area {
+                margin: 32px auto 0 auto;
+                max-width: 900px;
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+            }
+            textarea {
+                width: 100%;
+                min-height: 180px;
+                font-family: monospace;
+                font-size: 15px;
+                border-radius: 6px;
+                border: 1px solid #444;
+                background: #181818;
+                color: #fff;
+                margin-bottom: 12px;
+                padding: 10px;
+                resize: vertical;
+            }
+            button {
+                background: #f00;
+                color: #fff;
+                border: none;
+                border-radius: 4px;
+                padding: 10px 18px;
+                font-size: 16px;
+                cursor: pointer;
+                margin-bottom: 24px;
+                align-self: flex-end;
+            }
+            #container {
+                position: relative;
+                margin: 32px auto;
+                border-radius: 8px;
+                box-shadow: 0 2px 16px #0008;
+                background: #222;
+                overflow: auto;
+                display: block;
+            }
+            .viewer-img {
+                position: absolute;
+                object-fit: contain;
+                pointer-events: none;
+                z-index: 1;
+            }
+            svg {
+                position: absolute;
+                left: 0;
+                top: 0;
+                pointer-events: none;
+                z-index: 2;
+            }
+            .error {
+                color: #ff6a6a;
+                margin-bottom: 12px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="input-area">
+            <textarea
+                id="json-input"
+                placeholder="Paste data.json content here..."
+            ></textarea>
+            <div class="error" id="error-msg" style="display: none"></div>
+            <button id="load-btn">Load Viewer</button>
+        </div>
+        <div id="container" style="display: none"></div>
+        <script>
+            const input = document.getElementById('json-input')
+            const btn = document.getElementById('load-btn')
+            const container = document.getElementById('container')
+            const inputArea = document.getElementById('input-area')
+            const errorMsg = document.getElementById('error-msg')
+
+            function renderViewer(data) {
+                // Compute bounding box for all images
+                const minX = Math.min(
+                    ...data.images.map((img) => img.position.x)
+                )
+                const minY = Math.min(
+                    ...data.images.map((img) => img.position.y)
+                )
+                const maxX = Math.max(
+                    ...data.images.map((img) => img.position.x + img.width)
+                )
+                const maxY = Math.max(
+                    ...data.images.map((img) => img.position.y + img.height)
+                )
+                const width = maxX - minX
+                const height = maxY - minY
+                container.innerHTML = ''
+                container.style.width = width + 'px'
+                container.style.height = height + 'px'
+                container.style.position = 'relative'
+
+                // Create SVG for images and polygons
+                const svg = document.createElementNS(
+                    'http://www.w3.org/2000/svg',
+                    'svg'
+                )
+                svg.setAttribute('width', width)
+                svg.setAttribute('height', height)
+                svg.style.display = 'block'
+                svg.style.position = 'absolute'
+                svg.style.left = '0'
+                svg.style.top = '0'
+                svg.style.zIndex = '1'
+
+                // Define clip paths for each image
+                const defs = document.createElementNS(
+                    'http://www.w3.org/2000/svg',
+                    'defs'
+                )
+                data.images.forEach((img, i) => {
+                    if (!img.cropBox) return
+                    const { x1, y1, x2, y2 } = img.cropBox
+                    const clipPath = document.createElementNS(
+                        'http://www.w3.org/2000/svg',
+                        'clipPath'
+                    )
+                    clipPath.setAttribute('id', `clip-img-${i}`)
+                    const rect = document.createElementNS(
+                        'http://www.w3.org/2000/svg',
+                        'rect'
+                    )
+                    rect.setAttribute('x', img.position.x - minX + x1)
+                    rect.setAttribute('y', img.position.y - minY + y1)
+                    rect.setAttribute('width', x2 - x1)
+                    rect.setAttribute('height', y2 - y1)
+                    clipPath.appendChild(rect)
+                    defs.appendChild(clipPath)
+                })
+                svg.appendChild(defs)
+
+                // Add images as SVG <image> elements with clip paths
+                data.images.forEach((img, i) => {
+                    const image = document.createElementNS(
+                        'http://www.w3.org/2000/svg',
+                        'image'
+                    )
+                    image.setAttribute('href', img.src)
+                    image.setAttribute('x', img.position.x - minX)
+                    image.setAttribute('y', img.position.y - minY)
+                    image.setAttribute('width', img.width)
+                    image.setAttribute('height', img.height)
+                    if (img.cropBox) {
+                        image.setAttribute('clip-path', `url(#clip-img-${i})`)
+                    }
+                    image.setAttribute('preserveAspectRatio', 'none')
+                    svg.appendChild(image)
+                })
+
+                // Add polygons
+                data.polygons.forEach((poly) => {
+                    const polygon = document.createElementNS(
+                        'http://www.w3.org/2000/svg',
+                        'polygon'
+                    )
+                    polygon.setAttribute(
+                        'points',
+                        poly
+                            .map((pt) => `${pt.x - minX},${pt.y - minY}`)
+                            .join(' ')
+                    )
+                    polygon.setAttribute('fill', 'rgba(255,0,0,0.2)')
+                    polygon.setAttribute('stroke', '#f00')
+                    polygon.setAttribute('stroke-width', '2')
+                    svg.appendChild(polygon)
+                })
+                container.appendChild(svg)
+            }
+
+            btn.onclick = () => {
+                errorMsg.style.display = 'none'
+                let data
+                try {
+                    data = JSON.parse(input.value)
+                } catch (e) {
+                    errorMsg.textContent = 'Invalid JSON: ' + e.message
+                    errorMsg.style.display = 'block'
+                    return
+                }
+                if (!data.images || !data.polygons) {
+                    errorMsg.textContent =
+                        'JSON must have "images" and "polygons" arrays.'
+                    errorMsg.style.display = 'block'
+                    return
+                }
+                inputArea.style.display = 'none'
+                container.style.display = 'block'
+                renderViewer(data)
+            }
+        </script>
+    </body>
+</html>
