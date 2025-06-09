@@ -2,7 +2,7 @@ import Processor from './processor';
 import { ContourType, EndpointState, EyePop, ForwardOperatorType, InferenceType, PopComponentType, TransientPopId } from "@eyepop.ai/eyepop";
 import Render2d from '@eyepop.ai/eyepop-render-2d'
 
-class VisualIntelligenceProcessor extends Processor {
+class VLMProcessor extends Processor {
     buffer = [];
     hasPrompt = false;
     promptPlaceholder = "Ask comma separated questions about the image. Is their a dog in the image?, What color is the dog?";
@@ -14,30 +14,21 @@ class VisualIntelligenceProcessor extends Processor {
     }
 
     async setCanvasContext(canvasContext, stream) {
-        const api_key = process.env.NEXT_PUBLIC_ANYTHING_POP_API_KEY;
+        const api_key = process.env.NEXT_PUBLIC_VLM_API_KEY;
 
         this.endpoint = await EyePop.workerEndpoint({
             auth: {
                 secretKey: api_key,
             },
-            //eyepopUrl: process.env.NEXT_PUBLIC_ANYTHING_POP_API_URL,
+            eyepopUrl: process.env.NEXT_PUBLIC_VLM_API_URL,
             stopJobs: false
         }).connect()
 
         await this.endpoint.changePop({
             components: [{
                         type: PopComponentType.INFERENCE,
-                        id: 2,
-                        ability: 'eyepop.image-contents:latest',
-                        params:{
-                            prompts: [{
-                                prompt: "Analyze the image of cargo provided and determine the categories of: " + 
-                                ["Paint color of wooden pallet under the cargo (ex. No paint, Red, Blue, Black)",
-                                    "Is there damage to the cargo? (Yes/No + one sentence description)",
-                                    ].join(",") + 
-                                ". Report the values of the categories as classLabels. If you are unable to provide a category with a value then set it's classLabel to null"                               
-                            }],
-                        }
+                        id: 1,
+                        ability: 'eyepop.vlm.preview:latest',
                     }
                 ]
             });
@@ -58,33 +49,6 @@ class VisualIntelligenceProcessor extends Processor {
 
         console.log('Processing photo:', photo, this.prompt);
 
-        //const { objects, promptMap } = await this.handlePrompt(this.prompt);
-
-        //console.log("Objects:", objects);
-        //console.log("Prompt Map:", promptMap);
-
-        // const params = [
-        // //     {
-        // //     componentId: 1,
-        // //     values: {
-        // //         prompts: objects.map(obj => ({ prompt: obj }))
-        // //     }
-        // // }, 
-        // {
-        //     componentId: 2,
-        //     values: {
-        //         prompts: 
-        //         [{
-        //             prompt: "Analyze the image provided and determine the categories of: " + 
-        //             promptMap[objects[0]].join(',') + 
-        //             ". Report the values of the categories as classLabels. If you are unable to provide a category with a value then set it's classLabel to null"
-        //         }]
-        //         //promptMap[objects[0]].map(label => ({ prompt: label }))
-        //     }
-        // }];
-
-        //console.log("Params:", params);
-
         let results = await this.endpoint.process({
             file: photo,
             mimeType: 'image/*',
@@ -103,51 +67,83 @@ class VisualIntelligenceProcessor extends Processor {
                 canvasContext.canvas.height = result.source_height
             }
 
-            if(result.classes && result.classes.length > 0) 
-            {
-                
-                    for (let j = 0; j < result.classes.length; j++) {
-                        const classObj = result.classes[j];
-                        // Style the text to be light blue on a white background and medium size
-                        // Draw a white background rectangle
-                        canvasContext.fillStyle = "white";
-                        canvasContext.fillRect(
-                            15,
-                            100 + (j * 40),
-                            canvasContext.measureText(classObj.category + ": " + classObj.classLabel).width + 10,
-                            30
-                        );
-                        canvasContext.font = "24px Arial";
-                        canvasContext.fillStyle = "lightblue";
-                        canvasContext.fillText(classObj.category + ": " + classObj.classLabel,
-                            20,
-                            120 + (j * 40));
-                        
-                        
-                    }
-                
-            }
+            //example result:
+            //{
+            //     "seconds": 0,
+            //     "source_height": 834,
+            //     "source_id": "5146f435-4577-11f0-b6ea-0242ac110004",
+            //     "source_width": 1145,
+            //     "system_timestamp": 1749503923713696000,
+            //     "texts": [
+            //         {
+            //             "id": 204,
+            //             "text": "  The ceiling is white and there are lights on the ceiling.  The walls are white and there are pictures on the wall.  There are two men sitting at a desk.  One man is wearing glasses and the other is wearing a plaid shirt.  The man in the black shirt is giving a thumbs up."
+            //         }
+            //     ],
+            //     "timestamp": 0
+            // }
 
-            if (!result.objects || !result.objects.length > 0)
-                return
+            if (result.texts && result.texts.length > 0) {
+                const text = result.texts[0].text;
+                console.log("Text:", text);
+                // Draw text on canvas: centered black text on white background that takes up 80% horizontally and 20% vertically
+                const canvas = canvasContext.canvas;
+                const ctx = canvasContext;
 
-            console.log("START DRAWING", result.objects)
-            this.renderer.draw(result)
-            console.log("DONE DRAWING", result.objects)
+                // Set font and alignment
+                ctx.font = `${canvas.height * 0.02}px Arial`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
 
-            for (let i = 0; i < result.objects.length; i++) {
-                const object = result.objects[i];
-                if (object.classes && object.classes.length > 0) {
-                    for (let j = 0; j < object.classes.length; j++) {
-                        const classObj = object.classes[j];
-                        // if (classObj.confidence > this.confidenceThreshold) {
-                        canvasContext.fillText(classObj.category + ": " + classObj.classLabel,
-                            object.x+20,
-                            object.y + 120 + (j * 40));
-                        // }
+                // Calculate text position and dimensions
+                const textX = canvas.width / 2;
+                const textY = canvas.height * 0.8;
+                const textWidth = canvas.width * 0.8;
+                const textHeight = canvas.height * 0.2;
+
+                // Draw white background rectangle
+                ctx.fillStyle = "white";
+                ctx.fillRect(
+                    textX - textWidth / 2,
+                    textY - textHeight / 2,
+                    textWidth,
+                    textHeight
+                );
+
+                // Prepare to wrap text
+                const maxTextWidth = textWidth * 0.95;
+                const words = text.split(' ');
+                let line = '';
+                const lines = [];
+                const lineHeight = canvas.height * 0.03;
+
+                ctx.fillStyle = "black";
+
+                for (let i = 0; i < words.length; i++) {
+                    const testLine = line + words[i] + ' ';
+                    const metrics = ctx.measureText(testLine);
+                    const testWidth = metrics.width;
+                    if (testWidth > maxTextWidth && line !== '') {
+                        lines.push(line.trim());
+                        line = words[i] + ' ';
+                    } else {
+                        line = testLine;
                     }
                 }
+                lines.push(line.trim());
+
+                // Center the group of lines vertically
+                const totalTextHeight = lines.length * lineHeight;
+                let startY = textY - totalTextHeight / 2 + lineHeight / 2;
+
+                for (let i = 0; i < lines.length; i++) {
+                    ctx.fillText(lines[i], textX, startY + i * lineHeight);
+                }
+                    
+               
             }
+
+            
         }
     }
 
@@ -255,4 +251,4 @@ class VisualIntelligenceProcessor extends Processor {
 
 }
 
-export default VisualIntelligenceProcessor;
+export default VLMProcessor;

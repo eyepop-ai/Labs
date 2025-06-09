@@ -54,13 +54,20 @@ export const processors = [
     name: "(Upload Photo) Detect Objects based on prompt",
     module: () => import("../processors/anythingpop"),
   },
+  
+
+  {
+    name: "(Upload Photo) Detect People and answer questions about them.",
+    module: () => import("../processors/people_visualintelligence"),
+  },
   {
     name: "(Upload Photo) Detect Objects based on prompt, then ask questions of that object.",
     module: () => import("../processors/visualintelligence"),
   },
-
-
-
+  {
+    name: "(Upload Photo) Describe an image.",
+    module: () => import("../processors/vlm_staging"),
+  },
 ];
 
 export default function CameraPage() {
@@ -469,16 +476,16 @@ export default function CameraPage() {
             <input
               type="text"
               placeholder={currentModuleRef.current?.promptPlaceholder || "Enter prompt..."}
-              value={promptInput}
+              // value={promptInput}
               onChange={(e) => setPromptInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   currentModuleRef.current?.handlePrompt?.(promptInput).then((result: any) => {
-                    if (savedPhotos.length > 0) {
-                      processPhoto(savedPhotos[savedPhotos.length - 1].blob);
-                    } else {
-                      takePhoto();
-                    }
+                    // if (savedPhotos.length > 0) {
+                    //   processPhoto(savedPhotos[savedPhotos.length - 1].blob);
+                    // } else {
+                    //   takePhoto();
+                    // }
                   });
                 }
               }}
