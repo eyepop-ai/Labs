@@ -50,12 +50,7 @@ export const processors = [
     module: () => import("../processors/autohighlight_video"),
   },
 
-  {
-    name: "(Upload Photo) Detect Objects based on prompt",
-    module: () => import("../processors/anythingpop"),
-  },
-  
-
+ 
   {
     name: "(Upload Photo) Detect People and answer questions about them.",
     module: () => import("../processors/people_visualintelligence"),
@@ -68,6 +63,13 @@ export const processors = [
     name: "(Upload Photo) Describe an image.",
     module: () => import("../processors/vlm_staging"),
   },
+
+  {
+    name: "(Upload Photo) Detect Objects based on prompt",
+    module: () => import("../processors/anythingpop"),
+  },
+  
+
 ];
 
 export default function CameraPage() {

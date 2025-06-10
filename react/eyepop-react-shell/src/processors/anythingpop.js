@@ -4,7 +4,7 @@ import Render2d from '@eyepop.ai/eyepop-render-2d'
 
 class AnythingProcessor extends Processor {
     buffer = [];
-    hasPrompt = true;
+    hasPrompt = false;
     useSegmentation = false;
     confidenceThreshold = 0.4;
 
@@ -20,7 +20,7 @@ class AnythingProcessor extends Processor {
             auth: {
                 secretKey: api_key,
             },
-            eyepopUrl: process.env.NEXT_PUBLIC_ANYTHING_POP_API_URL,
+            //eyepopUrl: process.env.NEXT_PUBLIC_ANYTHING_POP_API_URL,
             stopJobs: false
         }).connect()
 
@@ -31,8 +31,7 @@ class AnythingProcessor extends Processor {
                 type: PopComponentType.INFERENCE,
                 ability: 'eyepop.localize-objects:latest',
                 params: {
-                    prompts: [
-                    ]
+                    prompts: ["pill. candy."]
                 }
             }
             ]
