@@ -41,6 +41,9 @@ class PickleballCheckPaddleProcessor extends Processor {
                 showConfidence: false,
             }),
         ])
+
+        await this.setStream(canvasContext, stream)
+
     }
 
     async processPhoto(photo, canvasContext, name, roi) {
@@ -196,13 +199,18 @@ class PickleballCheckPaddleProcessor extends Processor {
         //console.log('Processing video frame:', video, this.endpoint, this.renderer);
         if (!this.endpoint) return
         if (!this.renderer) return
-        if (!video) return
-        if (!video?.currentTime) return
-        if (!this.buffer?.length) return
 
-        const currentTime = video.currentTime;
-        let currentFrame = this.getClosestPrediction(currentTime)
 
+        let currentFrame = null;
+        if (!video || !video?.currentTime || !this.buffer?.length) 
+        {
+            currentFrame = this.lastPrediction
+        } else {
+            const currentTime = video.currentTime;
+            currentFrame = this.getClosestPrediction(currentTime)
+        }
+
+        
         if (currentFrame) {
             if (canvasContext.canvas.width !== currentFrame.source_width ||
                 canvasContext.canvas.height !== currentFrame.source_height) {
@@ -213,17 +221,11 @@ class PickleballCheckPaddleProcessor extends Processor {
             if (!currentFrame.objects || !currentFrame.objects.length > 0)
                 return
 
-            // Filter to most prominent object by area
-            currentFrame = this.getBiggestObjectInScene(currentFrame, "person")
 
-            if (currentFrame.objects.length === 0) return
-            const paddle = this.getPaddleAngleFromHand(currentFrame)
-            console.log("Paddle angle:", paddle);
-
-            //draw the paddle angle from spine
-            if (paddle) {
-                const { angle, spine } = paddle;
-                const { from, to } = spine;
+            for (let i = 0; i < currentFrame.objects.length; i++) {
+                const paddle = currentFrame.objects[i].keyPoints[0].points
+                const from = paddle[0]
+                const to = paddle[1]
                 canvasContext.beginPath();
                 canvasContext.moveTo(from.x, from.y);
                 canvasContext.lineTo(to.x, to.y);
@@ -231,15 +233,48 @@ class PickleballCheckPaddleProcessor extends Processor {
                 canvasContext.lineWidth = 2;
                 canvasContext.stroke();
                 canvasContext.closePath();
-
                 //add small white circle at the end of the spine
                 canvasContext.beginPath();
                 canvasContext.arc(to.x, to.y, 5, 0, 2 * Math.PI);
                 canvasContext.fillStyle = 'white';
                 canvasContext.fill();
-
+                canvasContext.closePath();
+                //add small white circle at the start of the spine
+                canvasContext.beginPath();
+                canvasContext.arc(from.x, from.y, 5, 0, 2 * Math.PI);
+                canvasContext.fillStyle = 'white';
+                canvasContext.fill();
                 canvasContext.closePath();
             }
+
+
+            // // Filter to most prominent object by area
+            // currentFrame = this.getBiggestObjectInScene(currentFrame, "person")
+
+            // if (currentFrame.objects.length === 0) return
+            // const paddle = this.getPaddleAngleFromHand(currentFrame)
+            // console.log("Paddle angle:", paddle);
+
+            // //draw the paddle angle from spine
+            // if (paddle) {
+            //     const { angle, spine } = paddle;
+            //     const { from, to } = spine;
+            //     canvasContext.beginPath();
+            //     canvasContext.moveTo(from.x, from.y);
+            //     canvasContext.lineTo(to.x, to.y);
+            //     canvasContext.strokeStyle = 'red';
+            //     canvasContext.lineWidth = 2;
+            //     canvasContext.stroke();
+            //     canvasContext.closePath();
+
+            //     //add small white circle at the end of the spine
+            //     canvasContext.beginPath();
+            //     canvasContext.arc(to.x, to.y, 5, 0, 2 * Math.PI);
+            //     canvasContext.fillStyle = 'white';
+            //     canvasContext.fill();
+
+            //     canvasContext.closePath();
+            // }
 
             // const stance = this.passFail_Stance(currentFrame)
             // console.log("Stance:", stance, currentFrame);

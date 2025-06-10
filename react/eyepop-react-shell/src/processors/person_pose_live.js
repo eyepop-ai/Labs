@@ -42,30 +42,6 @@ class PersonPoseLiveProcessor extends Processor {
         await this.setStream(canvasContext, stream)
     }
 
-    async setStream(canvasContext, stream) {
-        this.stream = stream;
-        const liveIngress = await this.endpoint.liveIngress(stream)
-
-        this.results = await this.endpoint.process({
-            ingressId: liveIngress.ingressId(),
-        })
-
-        for await (const result of this.results) {
-            if (
-                canvasContext.canvas.width !== result.source_width ||
-                canvasContext.canvas.height !== result.source_height
-            ) {
-                canvasContext.canvas.width = result.source_width
-                canvasContext.canvas.height = result.source_height
-            }
-
-            console.log("Stream result:", result)
-            this.lastPrediction = result
-        }
-
-    }
-
-
     async processPhoto(photo, canvasContext, name, roi) {
 
         console.log('Processing photo:', photo);

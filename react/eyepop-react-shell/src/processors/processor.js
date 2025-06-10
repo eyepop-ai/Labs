@@ -29,10 +29,27 @@ class Processor {
         // Add your canvas context setting code here
     }
 
-    async setStream(stream) {
-        // Implement the logic to set the stream
-        console.log('Setting stream:', stream);
-        // Add your stream setting code here
+    async setStream(canvasContext, stream) {
+        this.stream = stream;
+        const liveIngress = await this.endpoint.liveIngress(stream)
+
+        this.results = await this.endpoint.process({
+            ingressId: liveIngress.ingressId(),
+        })
+
+        for await (const result of this.results) {
+            if (
+                canvasContext.canvas.width !== result.source_width ||
+                canvasContext.canvas.height !== result.source_height
+            ) {
+                canvasContext.canvas.width = result.source_width
+                canvasContext.canvas.height = result.source_height
+            }
+
+            console.log("Stream result:", result)
+            this.lastPrediction = result
+        }
+
     }
 
     showSettings() {

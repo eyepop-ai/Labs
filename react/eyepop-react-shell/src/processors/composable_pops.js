@@ -32,7 +32,7 @@ export const ComposablePops = {
             {
                 type: PopComponentType.INFERENCE,
                 categoryName: "paddle_spine",
-                model: 'cg1-solutions.pickleball.paddle.spine:latest',
+                model: 'cg1-solutions.pickleball.paddle.spine:latest', 
             }
         ],
     },
