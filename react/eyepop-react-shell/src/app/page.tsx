@@ -59,14 +59,16 @@ export const processors = [
     name: "(Upload Photo) Detect Objects based on prompt, then ask questions of that object.",
     module: () => import("../processors/visualintelligence"),
   },
-  {
-    name: "(Upload Photo) Describe an image.",
-    module: () => import("../processors/vlm_staging"),
-  },
+  
 
   {
     name: "(Upload Photo) Detect Objects based on prompt",
     module: () => import("../processors/anythingpop"),
+  },
+
+  {
+    name: "(Upload Photo) Describe an image.",
+    module: () => import("../processors/vlm_staging"),
   },
   
 

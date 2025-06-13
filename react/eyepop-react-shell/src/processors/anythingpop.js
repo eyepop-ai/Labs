@@ -31,7 +31,10 @@ class AnythingProcessor extends Processor {
                 type: PopComponentType.INFERENCE,
                 ability: 'eyepop.localize-objects:latest',
                 params: {
-                    prompts: ["pill. candy."]
+                    prompts: [
+                        {
+                            prompt: "pink pill"
+                        }]
                 }
             }
             ]
