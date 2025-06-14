@@ -42,7 +42,6 @@ async function uploadAndWaitForAsset(client: any, datasetUUID: string, datasetVe
             console.log('Asset upload completed:', asset);
             break;
         }
-        console.log('Asset upload in progress:', asset);
         await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for 5 seconds before checking again
     }
     console.log('Asset upload completed:', uploadResult);
@@ -129,7 +128,6 @@ function prepareAsset(outputPath: string): { blob: Blob; fileName: string; width
 
 function createGroundTruthFromPolygons(entry: any, image: any, width: number, height: number, cropBoxX: number, cropBoxY: number, scaleFactor:number): Prediction {
     if (!entry.polygons || entry.polygons.length === 0) {
-        console.warn('No polygons found for entry:', entry);
         return {
             source_width: width,
             source_height: height,
@@ -137,36 +135,16 @@ function createGroundTruthFromPolygons(entry: any, image: any, width: number, he
         };
     }
 
-    console.log("SCALING DEBUG");
-    console.log("Image width",image.width);
-    console.log("Declared width",width);
+    console.log(`Scaling factor: actual width = ${width}, declared width = ${image.width}`);
 
     const objects: PredictedObject[] = [];
 
-    console.log(`Processing polygons for entry: ${entry.id}`);
     for (const polygon of entry.polygons) {
-        console.log("Raw point sample:", polygon[0]);
-        console.log("Image position:", image.position);
-        console.log("CropBoxX/Y:", cropBoxX, cropBoxY);
-        
-        // Transform: global coordinates -> image-relative -> crop-relative (consolidated)
         const normalizedPoints: PredictedKeyPoint[] = polygon.map((point: { x: any; y: any }) => {
-            // const cropRelativeX = point.x - image.position.x - cropBoxX;
-            // const cropRelativeY = point.y - image.position.y - cropBoxY;
-
-            //const scaleFactor = 1.05; // or computed from actual vs expected
-
             const cropRelativeX = (point.x - image.position.x - cropBoxX) * scaleFactor;
             const cropRelativeY = (point.y - image.position.y - cropBoxY) * scaleFactor;
             
-            console.log(`Sanity check:
-    viewerX: ${point.x}
-    positionX: ${image.position.x}
-    cropBoxX: ${cropBoxX}
-    finalX: ${cropRelativeX}
-    image width: ${width}`);
-
-            console.log(`Point transformation: Global(${point.x}, ${point.y}) -> CropRel(${cropRelativeX}, ${cropRelativeY})`);
+            console.log(`Transformed polygon point to crop-relative coordinates: (${cropRelativeX.toFixed(2)}, ${cropRelativeY.toFixed(2)})`);
             
             return {
                 x: cropRelativeX,
@@ -180,14 +158,12 @@ function createGroundTruthFromPolygons(entry: any, image: any, width: number, he
             };
         });
 
-        // Validate that points are within the cropped image bounds
         const allPointsValid = normalizedPoints.every(p => 
             p.x >= 0 && p.x <= width && p.y >= 0 && p.y <= height
         );
         
         if (!allPointsValid) {
-            console.warn('Some points are outside the cropped image bounds:', normalizedPoints);
-            console.warn(`Cropped image dimensions: ${width}x${height}`);
+            console.warn(`Warning: some points fall outside the ${width}x${height} crop bounds.`);
         }
 
         const minX = Math.min(...normalizedPoints.map(p => p.x));
@@ -198,13 +174,13 @@ function createGroundTruthFromPolygons(entry: any, image: any, width: number, he
         const polygonHeight = maxY - minY;
 
         const keypoints: PredictedKeyPoints[] = [{
-            category: "room_keypoint", // Changed to be more specific
+            category: "room_keypoint",
             type: "custom-keypoints",
             points: normalizedPoints,
         }];
 
         objects.push({
-            id: objects.length + 1, // Use incremental IDs
+            id: objects.length + 1,
             confidence: 1,
             classLabel: 'room',
             category: 'room',
@@ -255,7 +231,6 @@ async function run() {
         for (const entry of trainingData.data) {
             for (const image of entry.images) {
                 if (!image.src) {
-                    console.warn('Image source is missing:', image);
                     continue;
                 }
 
@@ -303,7 +278,7 @@ async function run() {
                     height = croppedDimensions.height;
 
                     console.log(`Expected cropped W/H: ${cropboxWidth}x${cropboxHeight}`);
-console.log(`Actual cropped W/H from sharp: ${croppedDimensions.width}x${croppedDimensions.height}`);
+                    console.log(`Actual cropped W/H from sharp: ${croppedDimensions.width}x${croppedDimensions.height}`);
 
                 } else {
                     console.log('No crop box found, using original image');
@@ -315,9 +290,6 @@ console.log(`Actual cropped W/H from sharp: ${croppedDimensions.width}x${cropped
                 const uploadResult = await uploadAndWaitForAsset(client, datasetUUID, datasetVersion, blob, fileName);
 
                 console.log("Computing scalefactor for ground truth...");
-                console.log("Image width", image.width);
-                console.log("Declared width", width);
-                console.log("originalImageWidth", originalImageWidth);
                 const scaleFactor = originalImageWidth / image.width;
 
                 const groundTruth = createGroundTruthFromPolygons(entry, image, width, height, cropBoxX, cropBoxY, scaleFactor);
@@ -325,8 +297,6 @@ console.log(`Actual cropped W/H from sharp: ${croppedDimensions.width}x${cropped
                 console.log('Ground truth added for asset:', uploadResult.uuid);
                 await printAssetDetails(client, uploadResult.uuid);
                 
-                console.log('Compare to what it should be:');
-                await printAssetDetails(client, "0684d9dd5b4376208000985e9c67df7b");
             }
         }
 
