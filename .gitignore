@@ -18,3 +18,5 @@ python/SortImagesByObject/output/*
 python/SortImagesByObject/input/*
 python/Detecting Blurry or Noisy Images/inputs/*
 python/Detecting Blurry or Noisy Images/models/*
+node/Data Ingest/*.txt
+node/Data Ingest/input/*.jpg
