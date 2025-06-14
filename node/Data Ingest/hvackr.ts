@@ -127,7 +127,7 @@ function prepareAsset(outputPath: string): { blob: Blob; fileName: string; width
     return { blob, fileName, width, height };
 }
 
-function createGroundTruthFromPolygons(entry: any, image: any, width: number, height: number, cropBoxX: number, cropBoxY: number): Prediction {
+function createGroundTruthFromPolygons(entry: any, image: any, width: number, height: number, cropBoxX: number, cropBoxY: number, scaleFactor:number): Prediction {
     if (!entry.polygons || entry.polygons.length === 0) {
         console.warn('No polygons found for entry:', entry);
         return {
@@ -136,6 +136,10 @@ function createGroundTruthFromPolygons(entry: any, image: any, width: number, he
             objects: [],
         };
     }
+
+    console.log("SCALING DEBUG");
+    console.log("Image width",image.width);
+    console.log("Declared width",width);
 
     const objects: PredictedObject[] = [];
 
@@ -150,7 +154,7 @@ function createGroundTruthFromPolygons(entry: any, image: any, width: number, he
             // const cropRelativeX = point.x - image.position.x - cropBoxX;
             // const cropRelativeY = point.y - image.position.y - cropBoxY;
 
-            const scaleFactor = 1.05; // or computed from actual vs expected
+            //const scaleFactor = 1.05; // or computed from actual vs expected
 
             const cropRelativeX = (point.x - image.position.x - cropBoxX) * scaleFactor;
             const cropRelativeY = (point.y - image.position.y - cropBoxY) * scaleFactor;
@@ -267,6 +271,11 @@ async function run() {
                 let { blob, fileName, width, height } = prepareAsset(outputPath);
                 console.log(`Preparing asset: ${fileName} (${width}x${height})`);
 
+                const originalImageWidth = width;
+                const originalImageHeight = height;
+
+
+
                 //crop the image to the cropbox
                 if (image.cropBox) {
                     const cropbox = image.cropBox;
@@ -305,7 +314,13 @@ console.log(`Actual cropped W/H from sharp: ${croppedDimensions.width}x${cropped
 
                 const uploadResult = await uploadAndWaitForAsset(client, datasetUUID, datasetVersion, blob, fileName);
 
-                const groundTruth = createGroundTruthFromPolygons(entry, image, width, height, cropBoxX, cropBoxY);
+                console.log("Computing scalefactor for ground truth...");
+                console.log("Image width", image.width);
+                console.log("Declared width", width);
+                console.log("originalImageWidth", originalImageWidth);
+                const scaleFactor = originalImageWidth / image.width;
+
+                const groundTruth = createGroundTruthFromPolygons(entry, image, width, height, cropBoxX, cropBoxY, scaleFactor);
                 await client.updateAssetGroundTruth(uploadResult.uuid, datasetUUID, datasetVersion, groundTruth);
                 console.log('Ground truth added for asset:', uploadResult.uuid);
                 await printAssetDetails(client, uploadResult.uuid);
