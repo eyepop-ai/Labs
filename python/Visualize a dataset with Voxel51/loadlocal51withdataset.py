@@ -15,9 +15,9 @@ import asyncio
 
 # Define the path to your dataset and other parameters
 images_patt = "/path/to/images/*"
-accountUUID = "2c97ab0b556742dbbdb7af34cc6f3b6a"
-datasetUUID = "0671ffe30fa1784380006a2cc5310604"
-apikey = "AAE_w6lCcrCa27chNAbZO-WdZ0FBQUFBQmwyUFk5bmtLZnJBQ2RFVWVDbzU1MnkwTUMzYXhQWjA4a0ZEczFKWWdONjdRS0NGWUZ5aF90aXVQZ3FrcWdkZWwwUEx6Q0luM0F3b3ItMjdqRmhUQkxyTWVvSndFLWRCUENjZGNlanZhbGhRTDdtV289"
+accountUUID = "<Your API KEY>"
+datasetUUID = "<Your DATASET UUID>"
+apikey = "<Your API KEY>"
 cache_directory = "~/Documents/voxel51_cache/"+accountUUID+"/"+datasetUUID
 
 
