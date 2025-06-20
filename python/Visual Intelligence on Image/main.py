@@ -3,6 +3,8 @@ from eyepop.worker.worker_types import Pop, InferenceComponent, ComponentParams
 import json
 import env  # Ensure this contains EYEPOP_SECRET_KEY 
 
+
+secret_key = env.EYEPOP_SECRET_KEY
 example_image_path = './images/example1.jpg'
 objectOfInterest = 'vehicle'
 questionList = (
@@ -12,7 +14,7 @@ questionList = (
     "Report the values of the categories as classLabels. "
 )
 
-with EyePopSdk.workerEndpoint(secret_key= env.EYEPOP_SECRET_KEY) as endpoint:
+with EyePopSdk.workerEndpoint(secret_key= secret_key) as endpoint:
     prompt = f"Analyze the image of {objectOfInterest} provided and determine the categories of: " + questionList + "If you are unable to provide a category with a value then set its classLabel to null"
 
     print (f"Using prompt: {prompt}")
@@ -22,16 +24,11 @@ with EyePopSdk.workerEndpoint(secret_key= env.EYEPOP_SECRET_KEY) as endpoint:
             InferenceComponent(
                 id=1,
                 ability='eyepop.image-contents:latest',
-                params=ComponentParams(
-                    componentId=1,
-                    values={
-                        "prompts": [
+                params={"prompts": [
                             {
                                 "prompt": prompt
                             }
-                        ]
-                    }
-                ).model_dump()
+                        ] }
             )
         ])
     )
