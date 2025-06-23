@@ -1,0 +1,8 @@
+# Image processing
+Pillow>=9.0.0
+
+# EyePop SDK
+eyepop
+
+# (Optional, for asyncio compatibility and typing on older Python versions)
+typing-extensions>=4.0.0
