@@ -10,10 +10,11 @@ import os
 import re
 input_dir = './images'
 image_files = [f for f in os.listdir(input_dir) if re.match(r'^odometer.*\.(jpg|jpeg|png)$', f, re.IGNORECASE)]
-objectOfInterest = 'odometer'
+objectOfInterest = 'vehicle dashboard'
 questionList = (
     "Odometer units. (km/mph - default to mph), "
     "Odometer reading. (number), "
+    "Fuel gauge reading. (percentage left), "
 )
 
 with EyePopSdk.workerEndpoint(secret_key=secret_key) as endpoint:
@@ -46,4 +47,7 @@ with EyePopSdk.workerEndpoint(secret_key=secret_key) as endpoint:
                 odometer_reading = value
             elif "units" in category or "odometer units" in category:
                 units = value
-        print(f"{image_file}: odometer_reading={odometer_reading}, units={units}")
+            elif "fuel gauge" in category:
+                fuel_gauge = value
+
+        print(f"{image_file}: odometer_reading={odometer_reading}, units={units}, fuel_gauge={fuel_gauge if 'fuel_gauge' in locals() else 'N/A'}")
