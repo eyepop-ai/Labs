@@ -14,7 +14,9 @@ questionList = (
     "Report the values of the categories as classLabels. "
 )
 
-with EyePopSdk.workerEndpoint(secret_key= secret_key) as endpoint:
+with EyePopSdk.workerEndpoint(
+    pop_id='transient',
+    secret_key= secret_key) as endpoint:
     prompt = f"Analyze the image of {objectOfInterest} provided and determine the categories of: " + questionList + "If you are unable to provide a category with a value then set its classLabel to null"
 
     print (f"Using prompt: {prompt}")
