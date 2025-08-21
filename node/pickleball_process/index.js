@@ -73,6 +73,13 @@ function makeSVGOverlay(width, height, graphics) {
                 ` : ''}
               </g>
             `;
+        } else if (g.shape === 'circle') {
+            const r = Number.isFinite(g.r) ? g.r : 4;
+            return `
+              <g id="${id}">
+                <circle cx="${g.cx}" cy="${g.cy}" r="${r}" fill="${safe(color)}" />
+              </g>
+            `;
         } else {
             const rx = Math.max(0, g.x);
             const ry = Math.max(0, g.y);
@@ -153,12 +160,37 @@ function objectsToBoxes(row) {
         return false;
     };
 
+    const pushPoseKeypointsIfAny = (o) => {
+        if (!Array.isArray(o.keyPoints)) return false;
+        let drewAny = false;
+        for (const kp of o.keyPoints) {
+            // Prefer the 3d-body-points set, but accept any with points[]
+            if (!Array.isArray(kp.points)) continue;
+            for (const pt of kp.points) {
+                if (pt && pt.visible !== false && Number.isFinite(pt.x) && Number.isFinite(pt.y)) {
+                    out.push({
+                        shape: 'circle',
+                        cx: pt.x,
+                        cy: pt.y,
+                        r: 4,
+                        color: colorByCategory['pose'] || '#ff00ff'
+                    });
+                    drewAny = true;
+                }
+            }
+        }
+        return drewAny;
+    };
+
     for (const obj of row.objects) {
         const cat = (obj.category || '').toLowerCase();
         if (cat === 'paddle_spine') {
             // Prefer a line from keypoints; if missing, fall back to rect
             const drewLine = pushPaddleLineIfAny(obj);
             if (!drewLine) pushRect(obj, '#00ffff');
+        } else if (cat === 'pose') {
+            // draw only keypoints for pose
+            pushPoseKeypointsIfAny(obj);
         } else {
             pushRect(obj);
         }
@@ -166,10 +198,13 @@ function objectsToBoxes(row) {
         // Draw immediate child objects too (e.g., pose nested under person)
         if (Array.isArray(obj.objects)) {
             for (const child of obj.objects) {
-                const ccat = (child.category || '').toLowerCase();
+                const ccat = (child.category || child.classLabel || '').toLowerCase();
                 if (ccat === 'paddle_spine') {
                     const drewLine = pushPaddleLineIfAny(child);
                     if (!drewLine) pushRect(child, '#00ffff');
+                } else if (ccat === 'pose') {
+                    // Do NOT draw a rect for pose; draw its keypoints instead
+                    pushPoseKeypointsIfAny(child);
                 } else {
                     pushRect(child);
                 }
