@@ -45,42 +45,66 @@ async function ffprobeJson(input) {
 //     return map;
 // }
 
-function makeSVGOverlay(width, height, boxes) {
-    // boxes: [{x,y,w,h,color?,label?,score?}]
-    // Defaults
+function makeSVGOverlay(width, height, graphics) {
+    // graphics: array of primitives:
+    //  - { shape: 'rect', x, y, w, h, label?, score?, color? }
+    //  - { shape: 'line', x1, y1, x2, y2, label?, score?, color? }
     const safe = (v) => String(v ?? '');
-    const rects = boxes.map((b, i) => {
-        const color = b.color || '#00ff00';
-        const label = b.label ? `${b.label}${Number.isFinite(b.score) ? ` (${(b.score * 100).toFixed(1)}%)` : ''}` : null;
-        const rx = Math.max(0, b.x);
-        const ry = Math.max(0, b.y);
-        const rw = Math.max(0, b.w);
-        const rh = Math.max(0, b.h);
-        const id = `b${i}`;
-        const textY = Math.max(12, ry + 12);
-        return `
-      <g id="${id}">
-        <rect x="${rx}" y="${ry}" width="${rw}" height="${rh}"
-          fill="none" stroke="${safe(color)}" stroke-width="3"/>
-        ${label ? `
-          <rect x="${rx}" y="${ry - 18 < 0 ? ry : ry - 18}" width="${Math.max(40, label.length * 7)}" height="18"
-            fill="${safe(color)}" fill-opacity="0.75"/>
-          <text x="${rx + 6}" y="${ry - 5 < 0 ? textY : ry - 5}"
-            font-family="sans-serif" font-size="12" fill="#000">${safe(label)}</text>
-        ` : ''}
-      </g>
-    `;
+
+    const elems = (graphics || []).map((g, i) => {
+        const color = g.color || '#00ff00';
+        const id = `g${i}`;
+        if (g.shape === 'line') {
+            const mx = (g.x1 + g.x2) / 2;
+            const my = (g.y1 + g.y2) / 2;
+            const label = g.label ? `${g.label}${Number.isFinite(g.score) ? ` (${(g.score * 100).toFixed(1)}%)` : ''}` : null;
+            const pad = 4;
+            const labelWidth = label ? Math.max(40, label.length * 7) : 0;
+            const lx = Math.max(0, Math.min(width - labelWidth, mx - labelWidth / 2));
+            const ly = Math.max(0, my - 12);
+            return `
+              <g id="${id}">
+                <line x1="${g.x1}" y1="${g.y1}" x2="${g.x2}" y2="${g.y2}" stroke="${safe(color)}" stroke-width="4" />
+                ${label ? `
+                  <rect x="${lx - pad}" y="${ly - 14}" width="${labelWidth + pad * 2}" height="18"
+                    fill="${safe(color)}" fill-opacity="0.75"/>
+                  <text x="${lx}" y="${ly}"
+                    font-family="sans-serif" font-size="12" fill="#000">${safe(label)}</text>
+                ` : ''}
+              </g>
+            `;
+        } else {
+            const rx = Math.max(0, g.x);
+            const ry = Math.max(0, g.y);
+            const rw = Math.max(0, g.w);
+            const rh = Math.max(0, g.h);
+            const label = g.label ? `${g.label}${Number.isFinite(g.score) ? ` (${(g.score * 100).toFixed(1)}%)` : ''}` : null;
+            const textY = Math.max(12, ry + 12);
+            return `
+              <g id="${id}">
+                <rect x="${rx}" y="${ry}" width="${rw}" height="${rh}"
+                  fill="none" stroke="${safe(color)}" stroke-width="3"/>
+                ${label ? `
+                  <rect x="${rx}" y="${ry - 18 < 0 ? ry : ry - 18}" width="${Math.max(40, label.length * 7)}" height="18"
+                    fill="${safe(color)}" fill-opacity="0.75"/>
+                  <text x="${rx + 6}" y="${ry - 5 < 0 ? textY : ry - 5}"
+                    font-family="sans-serif" font-size="12" fill="#000">${safe(label)}</text>
+                ` : ''}
+              </g>
+            `;
+        }
     }).join('\n');
 
     return Buffer.from(
         `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-      ${rects}
-    </svg>`
+          ${elems}
+        </svg>`
     );
 }
 
 function objectsToBoxes(row) {
-    // Convert buffer entry with { objects: [...] } into an array of {x,y,w,h,label,score,color}
+    // Convert buffer entry with { objects: [...] } into an array of drawing primitives
+    // Rects for most objects; a line for paddle_spine based on its keypoints.
     if (!row || !Array.isArray(row.objects)) return [];
     const colorByCategory = {
         ball: '#00ff00',
@@ -88,38 +112,71 @@ function objectsToBoxes(row) {
         person: '#ffcc00',
         pose: '#ff00ff'
     };
-    const boxes = [];
-    for (const obj of row.objects) {
-        // draw box if present
-        if (Number.isFinite(obj.x) && Number.isFinite(obj.y) && Number.isFinite(obj.width) && Number.isFinite(obj.height)) {
-            boxes.push({
-                x: obj.x,
-                y: obj.y,
-                w: obj.width,
-                h: obj.height,
-                label: obj.classLabel || obj.category || '',
-                score: obj.confidence,
-                color: colorByCategory[(obj.category || '').toLowerCase()] || '#00ff00'
+    const out = [];
+
+    const pushRect = (o, fallbackColor) => {
+        if (Number.isFinite(o.x) && Number.isFinite(o.y) && Number.isFinite(o.width) && Number.isFinite(o.height)) {
+            out.push({
+                shape: 'rect',
+                x: o.x,
+                y: o.y,
+                w: o.width,
+                h: o.height,
+                label: o.classLabel || o.category || '',
+                score: o.confidence,
+                color: colorByCategory[(o.category || '').toLowerCase()] || fallbackColor || '#00ff00'
             });
         }
-        // also draw child objects (e.g., pose nested under person)
+    };
+
+    const pushPaddleLineIfAny = (o) => {
+        // Look for keyPoints[0].points[0..1]
+        if (!Array.isArray(o.keyPoints)) return false;
+        for (const kp of o.keyPoints) {
+            if (!Array.isArray(kp.points) || kp.points.length < 2) continue;
+            const p1 = kp.points[0];
+            const p2 = kp.points[1];
+            if (p1 && p2 && Number.isFinite(p1.x) && Number.isFinite(p1.y) && Number.isFinite(p2.x) && Number.isFinite(p2.y)) {
+                out.push({
+                    shape: 'line',
+                    x1: p1.x,
+                    y1: p1.y,
+                    x2: p2.x,
+                    y2: p2.y,
+                    label: o.classLabel || o.category || 'paddle',
+                    score: o.confidence,
+                    color: colorByCategory['paddle_spine'] || '#00ffff'
+                });
+                return true;
+            }
+        }
+        return false;
+    };
+
+    for (const obj of row.objects) {
+        const cat = (obj.category || '').toLowerCase();
+        if (cat === 'paddle_spine') {
+            // Prefer a line from keypoints; if missing, fall back to rect
+            const drewLine = pushPaddleLineIfAny(obj);
+            if (!drewLine) pushRect(obj, '#00ffff');
+        } else {
+            pushRect(obj);
+        }
+
+        // Draw immediate child objects too (e.g., pose nested under person)
         if (Array.isArray(obj.objects)) {
             for (const child of obj.objects) {
-                if (Number.isFinite(child.x) && Number.isFinite(child.y) && Number.isFinite(child.width) && Number.isFinite(child.height)) {
-                    boxes.push({
-                        x: child.x,
-                        y: child.y,
-                        w: child.width,
-                        h: child.height,
-                        label: child.classLabel || child.category || '',
-                        score: child.confidence,
-                        color: colorByCategory[(child.category || '').toLowerCase()] || '#ff00ff'
-                    });
+                const ccat = (child.category || '').toLowerCase();
+                if (ccat === 'paddle_spine') {
+                    const drewLine = pushPaddleLineIfAny(child);
+                    if (!drewLine) pushRect(child, '#00ffff');
+                } else {
+                    pushRect(child);
                 }
             }
         }
     }
-    return boxes;
+    return out;
 }
 
 async function augmentVideoWithBoxes(inputFilePath, outputFilePath, buffer) {
