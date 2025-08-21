@@ -1,0 +1,333 @@
+#!/usr/bin/env node
+const { ForwardOperatorType, PopComponentType, EyePop } = require("@eyepop.ai/eyepop");
+const fs = require('fs');
+const fse = require('fs-extra');
+const path = require('path');
+const fg = require('fast-glob');
+const sharp = require('sharp');
+
+// Lazy-load ESM execa inside CJS
+let _execa = null;
+async function execaCmd(cmd, args, opts) {
+  if (!_execa) {
+    const mod = await import('execa');
+    _execa = mod.execa;
+  }
+  return _execa(cmd, args, opts);
+}
+
+
+
+let endpoint = null;
+let api_key = process.env.EYEPOP_API_KEY;
+
+async function ffprobeJson(input) {
+    const { stdout } = await execaCmd('ffprobe', [
+        '-v', 'error',
+        '-print_format', 'json',
+        '-show_streams',
+        '-show_format',
+        input
+    ]);
+    return JSON.parse(stdout);
+}
+
+// function groupBoxesByFrame(data, fps) {
+//     // Accepts entries with {frame} or {time}. Returns Map<frameIndex, boxes[]>
+//     const map = new Map();
+//     for (const row of data) {
+//         const frame = Number.isFinite(row.frame)
+//             ? row.frame
+//             : Math.round(row.time * fps);
+//         if (!map.has(frame)) map.set(frame, []);
+//         for (const b of row.boxes || []) map.get(frame).push(b);
+//     }
+//     return map;
+// }
+
+function makeSVGOverlay(width, height, boxes) {
+    // boxes: [{x,y,w,h,color?,label?,score?}]
+    // Defaults
+    const safe = (v) => String(v ?? '');
+    const rects = boxes.map((b, i) => {
+        const color = b.color || '#00ff00';
+        const label = b.label ? `${b.label}${Number.isFinite(b.score) ? ` (${(b.score * 100).toFixed(1)}%)` : ''}` : null;
+        const rx = Math.max(0, b.x);
+        const ry = Math.max(0, b.y);
+        const rw = Math.max(0, b.w);
+        const rh = Math.max(0, b.h);
+        const id = `b${i}`;
+        const textY = Math.max(12, ry + 12);
+        return `
+      <g id="${id}">
+        <rect x="${rx}" y="${ry}" width="${rw}" height="${rh}"
+          fill="none" stroke="${safe(color)}" stroke-width="3"/>
+        ${label ? `
+          <rect x="${rx}" y="${ry - 18 < 0 ? ry : ry - 18}" width="${Math.max(40, label.length * 7)}" height="18"
+            fill="${safe(color)}" fill-opacity="0.75"/>
+          <text x="${rx + 6}" y="${ry - 5 < 0 ? textY : ry - 5}"
+            font-family="sans-serif" font-size="12" fill="#000">${safe(label)}</text>
+        ` : ''}
+      </g>
+    `;
+    }).join('\n');
+
+    return Buffer.from(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+      ${rects}
+    </svg>`
+    );
+}
+
+function objectsToBoxes(row) {
+    // Convert buffer entry with { objects: [...] } into an array of {x,y,w,h,label,score,color}
+    if (!row || !Array.isArray(row.objects)) return [];
+    const colorByCategory = {
+        ball: '#00ff00',
+        paddle_spine: '#00ffff',
+        person: '#ffcc00',
+        pose: '#ff00ff'
+    };
+    const boxes = [];
+    for (const obj of row.objects) {
+        // draw box if present
+        if (Number.isFinite(obj.x) && Number.isFinite(obj.y) && Number.isFinite(obj.width) && Number.isFinite(obj.height)) {
+            boxes.push({
+                x: obj.x,
+                y: obj.y,
+                w: obj.width,
+                h: obj.height,
+                label: obj.classLabel || obj.category || '',
+                score: obj.confidence,
+                color: colorByCategory[(obj.category || '').toLowerCase()] || '#00ff00'
+            });
+        }
+        // also draw child objects (e.g., pose nested under person)
+        if (Array.isArray(obj.objects)) {
+            for (const child of obj.objects) {
+                if (Number.isFinite(child.x) && Number.isFinite(child.y) && Number.isFinite(child.width) && Number.isFinite(child.height)) {
+                    boxes.push({
+                        x: child.x,
+                        y: child.y,
+                        w: child.width,
+                        h: child.height,
+                        label: child.classLabel || child.category || '',
+                        score: child.confidence,
+                        color: colorByCategory[(child.category || '').toLowerCase()] || '#ff00ff'
+                    });
+                }
+            }
+        }
+    }
+    return boxes;
+}
+
+async function augmentVideoWithBoxes(inputFilePath, outputFilePath, buffer) {
+    const inputVideo = inputFilePath
+    const outputVideo = outputFilePath || inputFilePath.replace(/\.mp4$/, '_overlay.mp4');
+
+    const meta = await ffprobeJson(inputVideo);
+    const vstream = (meta.streams || []).find(s => s.codec_type === 'video');
+    if (!vstream) throw new Error('No video stream found');
+    const fpsStr = vstream.r_frame_rate || vstream.avg_frame_rate || '30/1';
+    const [num, den] = fpsStr.split('/').map(Number);
+    const fps = den ? num / den : Number(fpsStr);
+    const width = vstream.width;
+    const height = vstream.height;
+
+    const hasAudio = !!(meta.streams || []).find(s => s.codec_type === 'audio');
+
+    const tmpDir = path.join(process.cwd(), `.frames_${Date.now()}`);
+    const rawDir = path.join(tmpDir, 'raw');
+    const outDir = path.join(tmpDir, 'out');
+    await fse.ensureDir(rawDir);
+    await fse.ensureDir(outDir);
+
+    // 1) Extract frames as PNG to preserve quality and avoid JPEG artifacts
+    //    We keep original FPS.
+    await execaCmd('ffmpeg', [
+        '-y',
+        '-i', inputVideo,
+        '-vsync', '0',
+        path.join(rawDir, '%08d.png')
+    ], { stdio: 'inherit' });
+
+    // 2) Load boxes
+    const frameMap = buffer.reduce((map, row, idx) => {
+        // Treat buffer index as the frame index when no explicit frame/time is provided
+        const frame = Number.isFinite(row.frame)
+            ? row.frame
+            : Number.isFinite(row.time) ? Math.round(row.time * fps) : idx;
+        if (!map.has(frame)) map.set(frame, []);
+        const boxes = objectsToBoxes(row);
+        for (const b of boxes) map.get(frame).push(b);
+        return map;
+    }, new Map());
+
+    // 3) Draw overlays
+    const frames = await fg(['*.png'], { cwd: rawDir, onlyFiles: true, absolute: true });
+    frames.sort();
+    let processed = 0;
+
+    for (let i = 0; i < frames.length; i++) {
+        const frameIdx = i + 1; // ffmpeg extracted frames start at 00000001
+        const file = frames[i];
+        const img = sharp(file);
+        const overlayBoxes = frameMap.get(frameIdx - 1) || []; // assume JSON 0-based
+        if (overlayBoxes.length === 0) {
+            // pass through
+            await img.toFile(path.join(outDir, path.basename(file)));
+        } else {
+            const svg = makeSVGOverlay(width, height, overlayBoxes);
+            await img
+                .composite([{ input: svg, left: 0, top: 0 }])
+                .toFile(path.join(outDir, path.basename(file)));
+        }
+        if (++processed % 100 === 0) console.log(`Processed ${processed}/${frames.length} frames`);
+    }
+
+    // 4) Re-encode. Keep original fps. Try to copy audio if present.
+    const outArgs = [
+        '-y',
+        '-framerate', String(fps),
+        '-i', path.join(outDir, '%08d.png'),
+        ...(hasAudio ? ['-i', inputVideo] : []),
+        '-map', '0:v:0',
+        ...(hasAudio ? ['-map', '1:a:0?'] : []),
+        '-c:v', 'libx264',
+        '-pix_fmt', 'yuv420p',
+        '-crf', '18',
+        '-preset', 'veryfast',
+        ...(hasAudio ? ['-c:a', 'aac', '-b:a', '192k'] : []),
+        '-shortest',
+        outputVideo
+    ];
+    await execaCmd('ffmpeg', outArgs, { stdio: 'inherit' });
+
+    console.log(`Done. Wrote ${outputVideo}`);
+}
+
+async function processVideo(inputFilePath, outputFilePath, popDefinition) {
+
+    if (!endpoint) {
+        endpoint = await EyePop.workerEndpoint({
+            auth: {
+                secretKey: api_key,
+            }
+        }).connect()
+    }
+
+    await endpoint.changePop(
+        popDefinition
+    );
+
+    //check if inputFilePath+".json" exists    
+    const inputJsonPath = inputFilePath + ".json";
+    let buffer = [];
+
+    if (fs.existsSync(inputJsonPath)) {
+        console.log("Using cached data from:", inputJsonPath);
+        const cachedData = JSON.parse(fs.readFileSync(inputJsonPath, 'utf8'));
+        buffer = cachedData;
+    } else {
+
+        let results = await endpoint.process({
+            path: inputFilePath
+        })
+
+
+        for await (let result of results) {
+            buffer.push(result)
+            console.log("Processing... ", result.timestamp/1000000000);
+
+            if ('event' in result && result.event.type === 'error') {
+                console.log("VIDEO RESULT", result.event.message)
+            }
+        }
+
+        console.log("Processing complete. Buffer length:", buffer.length);
+        // Save the buffer to a JSON file
+        fs.writeFileSync(inputJsonPath, JSON.stringify(buffer, null, 2));
+    }
+
+    // take the output buffer and frame be frame augment the video
+    await augmentVideoWithBoxes(inputFilePath, outputFilePath, buffer);
+}
+
+pop_definition = {
+    components: [
+        // Test with standard models first - comment out custom pickleball models for now
+        {
+            type: PopComponentType.INFERENCE,
+            modelUuid: '068080d5b5da79d88000fe5676e26017',
+            categoryName: 'ball',
+            confidenceThreshold: 0.7,
+        },
+        {
+            type: PopComponentType.INFERENCE,
+            modelUuid: '0686ec711e6d7d5c80008d2b8ecca4b6',
+            categoryName: 'paddle_spine',
+            confidenceThreshold: 0.7,
+        },
+        {
+            type: PopComponentType.INFERENCE,
+            model: 'eyepop.person:latest',
+            categoryName: 'person',
+            confidenceThreshold: 0.9,
+            forward: {
+                operator: {
+                    type: ForwardOperatorType.CROP,
+                    crop: {
+                        boxPadding: 0.5
+                    }
+                },
+                targets: [{
+                    type: PopComponentType.INFERENCE,
+                    model: 'eyepop.person.pose:latest',
+                    hidden: true,
+                    forward: {
+                        operator: {
+                            type: ForwardOperatorType.CROP,
+                            crop: {
+                                boxPadding: 0.5,
+                                orientationTargetAngle: -90.0,
+                            }
+                        },
+                        targets: [{
+                            type: PopComponentType.INFERENCE,
+                            model: 'eyepop.person.3d-body-points.heavy:latest',
+                            categoryName: '3d-body-points',
+                            confidenceThreshold: 0.25
+                        }]
+                    }
+                }]
+            }
+
+        }
+    ],
+}
+
+console.log("Pop definition created:", pop_definition);
+
+// grab the list of mp4 files from ./input_video
+
+const inputDir = path.join(__dirname, 'input_video');
+const outputDir = path.join(__dirname, 'output_video');
+
+if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir);
+}
+
+const files = fs.readdirSync(inputDir).filter(file => file.endsWith('.mp4'));
+console.log("Found video files:", files);
+
+for (const file of files) {
+    const inputFilePath = path.join(inputDir, file);
+    const outputFilePath = path.join(outputDir, file.replace('.mp4', '_output.mp4'));
+
+    console.log(`Processing file: ${inputFilePath}`);
+
+    processVideo(inputFilePath, outputFilePath, pop_definition);
+
+    console.log(`Output will be saved to: ${outputFilePath}`);
+}
