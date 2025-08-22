@@ -261,14 +261,20 @@ async function augmentVideoWithBoxes(inputFilePath, outputFilePath, buffer) {
         const file = frames[i];
         const img = sharp(file);
         const overlayBoxes = frameMap.get(frameIdx - 1) || []; // assume JSON 0-based
+
+        // Read actual frame dimensions (accounts for rotation/orientation that may differ from stream width/height)
+        const metaPng = await img.metadata();
+        const frameW = metaPng.width;
+        const frameH = metaPng.height;
+
         if (overlayBoxes.length === 0) {
-            // pass through
-            await img.toFile(path.join(outDir, path.basename(file)));
+          // pass through
+          await img.toFile(path.join(outDir, path.basename(file)));
         } else {
-            const svg = makeSVGOverlay(width, height, overlayBoxes);
-            await img
-                .composite([{ input: svg, left: 0, top: 0 }])
-                .toFile(path.join(outDir, path.basename(file)));
+          const svg = makeSVGOverlay(frameW, frameH, overlayBoxes);
+          await img
+            .composite([{ input: svg, left: 0, top: 0 }])
+            .toFile(path.join(outDir, path.basename(file)));
         }
         if (++processed % 100 === 0) console.log(`Processed ${processed}/${frames.length} frames`);
     }

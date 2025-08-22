@@ -58,18 +58,6 @@ pop_definition = {
         // Test with standard models first - comment out custom pickleball models for now
         {
             type: PopComponentType.INFERENCE,
-            modelUuid: '068080d5b5da79d88000fe5676e26017',
-            categoryName: 'ball',
-            confidenceThreshold: 0.7,
-        },
-        {
-            type: PopComponentType.INFERENCE,
-            modelUuid: '0686ec711e6d7d5c80008d2b8ecca4b6',
-            categoryName: 'paddle_spine',
-            confidenceThreshold: 0.7,
-        },
-        {
-            type: PopComponentType.INFERENCE,
             model: 'eyepop.person:latest',
             categoryName: 'person',
             confidenceThreshold: 0.9,
@@ -102,7 +90,19 @@ pop_definition = {
                 }]
             }
 
-        }
+        },
+        {
+            type: PopComponentType.INFERENCE,
+            modelUuid: '068080d5b5da79d88000fe5676e26017',
+            categoryName: 'ball',
+            confidenceThreshold: 0.7,
+        },
+        {
+            type: PopComponentType.INFERENCE,
+            modelUuid: '0686ec711e6d7d5c80008d2b8ecca4b6',
+            categoryName: 'paddle_spine',
+            confidenceThreshold: 0.84,
+        },
     ],
 }
 
@@ -116,13 +116,15 @@ const outputDir = path.join(__dirname, 'output_video');
 if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir);
 }
-
-const files = fs.readdirSync(inputDir).filter(file => file.endsWith('.mp4'));
+const files = fs.readdirSync(inputDir).filter(file =>
+    file.toLowerCase().endsWith('.mov') || file.toLowerCase().endsWith('.mp4')
+);
 console.log("Found video files:", files);
 
 for (const file of files) {
     const inputFilePath = path.join(inputDir, file);
-    const outputFilePath = path.join(outputDir, file.replace('.mp4', '_output.mp4'));
+    const baseName = path.parse(file).name;
+    const outputFilePath = path.join(outputDir, baseName + '_output.mp4');
 
     console.log(`Processing file: ${inputFilePath}`);
 
