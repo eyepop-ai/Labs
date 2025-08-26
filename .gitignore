@@ -16,3 +16,7 @@ react-native/*/android/app/build
 
 python/SortImagesByObject/output/*
 python/SortImagesByObject/input/*
+node/pickleball_process/input_video/*.json
+node/pickleball_process/input_video/*.mp4
+
+node/pickleball_process/output_video/*.mp4
