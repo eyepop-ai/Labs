@@ -24,18 +24,23 @@ async function processVideo(inputFilePath, outputFilePath, popDefinition) {
                     secretKey: api_key,
                 }
             }).connect()
+
+            console.log("Connected to EyePop endpoint:", endpoint);
+            console.log("Setting pop definition:", JSON.stringify(popDefinition, null, 2));
+            await endpoint.changePop(
+                popDefinition
+            );
         }
 
-        await endpoint.changePop(
-            popDefinition
-        );
-
+        console.log("Processing...");
         let results = await endpoint.process({
             path: inputFilePath
         })
 
-
+        console.log("Awaiting results...");
+        console.log(results)
         for await (let result of results) {
+            console.log("Received result", result);
             buffer.push(result)
             console.log("Processing... ", result.timestamp / 1000000000);
 
