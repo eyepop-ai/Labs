@@ -213,6 +213,11 @@ async function augmentVideoWithBoxes(inputFilePath, outputFilePath, buffer) {
     const inputVideo = inputFilePath
     const outputVideo = outputFilePath || inputFilePath.replace(/\.mp4$/, '_overlay.mp4');
 
+    if (fs.existsSync(outputVideo)) {
+        console.log(`Output file ${outputVideo} already exists. Skipping.`);
+        return;
+    }
+
     const meta = await ffprobeJson(inputVideo);
     const vstream = (meta.streams || []).find(s => s.codec_type === 'video');
     if (!vstream) throw new Error('No video stream found');

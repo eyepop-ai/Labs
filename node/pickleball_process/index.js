@@ -99,9 +99,10 @@ pop_definition = {
         },
         {
             type: PopComponentType.INFERENCE,
-            modelUuid: '0686ec711e6d7d5c80008d2b8ecca4b6',
+            modelUuid: '068c07263ba57e218000e7655d6b8a3d',
+            
             categoryName: 'paddle_spine',
-            confidenceThreshold: 0.84,
+            confidenceThreshold: 0.7,
         },
     ],
 }
@@ -121,14 +122,16 @@ const files = fs.readdirSync(inputDir).filter(file =>
 );
 console.log("Found video files:", files);
 
-for (const file of files) {
-    const inputFilePath = path.join(inputDir, file);
-    const baseName = path.parse(file).name;
-    const outputFilePath = path.join(outputDir, baseName + '_output.mp4');
+(async () => {
+    for (const file of files) {
+        const inputFilePath = path.join(inputDir, file);
+        const baseName = path.parse(file).name;
+        const outputFilePath = path.join(outputDir, baseName + '_output.mp4');
 
-    console.log(`Processing file: ${inputFilePath}`);
+        console.log(`Processing file: ${inputFilePath}`);
 
-    processVideo(inputFilePath, outputFilePath, pop_definition);
+        await processVideo(inputFilePath, outputFilePath, pop_definition);
 
-    console.log(`Output will be saved to: ${outputFilePath}`);
-}
+        console.log(`Output will be saved to: ${outputFilePath}`);
+    }
+})();
