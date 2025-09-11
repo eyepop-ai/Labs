@@ -25,10 +25,10 @@ export const processors = [
     module: () => import("../processors/person_pose"),
   },
 
-  //{
-  //    name: "(Edge Runtime - Live) Detect Person Pose",
-  //    module: () => import("../processors/person_pose_live"),
-  //},
+  {
+     name: "(Edge Runtime - Live) Detect Person Pose",
+     module: () => import("../processors/person_pose_live"),
+  },
   {
     name: "(Upload Img) Sticker Effect - Detect Person and sticker them",
     module: () => import("../processors/sticker_effect_person_upload"),
