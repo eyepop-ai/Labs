@@ -46,7 +46,7 @@ export const processors = [
     module: () => import("../processors/crop_person"),
   },
   {
-    name: "(Upload Video) Auto Hightlight to Objects - Detect Object and trim video",
+    name: "(Upload Video) Auto Highlight to Objects - Detect Object and trim video",
     module: () => import("../processors/autohighlight_video"),
   },
 
@@ -59,19 +59,14 @@ export const processors = [
     name: "(Upload Photo) Detect Objects based on prompt, then ask questions of that object.",
     module: () => import("../processors/visualintelligence"),
   },
-  
-
   {
     name: "(Upload Photo) Detect Objects based on prompt",
     module: () => import("../processors/anythingpop"),
   },
-
   {
     name: "(Upload Photo) Describe an image.",
     module: () => import("../processors/vlm_staging"),
   },
-  
-
 ];
 
 export default function CameraPage() {
