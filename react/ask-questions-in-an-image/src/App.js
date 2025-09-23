@@ -9,19 +9,20 @@ function App() {
 
   const [image, setImage] = useState(null);
   const [questions, setQuestions] = useState([
-    // "Is the water heater in this image a tank or tankless model (tank/tankless)?",
-    // "Is the water heater in this image showing signs of rust or corrosion (Yes/No)?",
-    // "Is the water heater in this image showing signs of leaking (Yes/No)?",
-    // "Is the water heater in this image a gas or electric model (gas/electric)?",
-    // "What is the brand of the water heater in this image?",
-    // "What is the color of the water heater in this image?",
-    // "What is the shape of the water heater in this image?",
-    // "What is the condition of the water heater in this image (new/old/damaged)?"
-    "How clean is the fireplace interior (e.g., soot/creosote buildup, clean)?",
-    "Are there any safety concerns visible with the fireplace (e.g., blockage potential)?",
-    "What is the overall condition of the fireplace (e.g., good, worn, structural concerns)?",
-    "Is there visible water damage around the fireplace (Yes/No)?",
-    "Are there any ventilation issues with the fireplace (e.g., clear, obstructed)?"
+    "Is the water heater in this image a tank or tankless model (tank/tankless)?",
+    "Is the water heater in this image showing signs of rust or corrosion (Yes/No)?",
+    "Is the water heater in this image showing signs of leaking (Yes/No)?",
+    "Is the water heater in this image a gas or electric model (gas/electric)?",
+    "What is the brand of the water heater in this image?",
+    "What is the color of the water heater in this image?",
+    "What is the shape of the water heater in this image?",
+    "What is the condition of the water heater in this image (new/old/damaged)?"
+
+    // "How clean is the fireplace interior (e.g., soot/creosote buildup, clean)?",
+    // "Are there any safety concerns visible with the fireplace (e.g., blockage potential)?",
+    // "What is the overall condition of the fireplace (e.g., good, worn, structural concerns)?",
+    // "Is there visible water damage around the fireplace (Yes/No)?",
+    // "Are there any ventilation issues with the fireplace (e.g., clear, obstructed)?"
 
   ]);
   const [newQuestion, setNewQuestion] = useState('');
@@ -51,65 +52,22 @@ function App() {
 
   const handleDragOver = (e) => e.preventDefault();
 
-  // Move endpoint initialization and pop change to useEffect so it runs on load
-  React.useEffect(() => {
-    const setupEndpoint = async () => {
-      setState('Setting up...');
-      if (!endpointRef.current) {
-        const api_key = process.env.REACT_APP_ANYTHING_POP_API_KEY;
-        console.log("Using API Key:", api_key);
-        endpointRef.current = await EyePop.workerEndpoint({
-          auth: { secretKey: api_key },
-          stopJobs: false
-        }).connect();
-      }
-      setState('Ready');
-
-
-    };
-    setupEndpoint();
-    // Only run once on mount, or when questions change
-  }, []);
-
   const handleContinue = async () => {
     if (!image) return;
-    console.log('Processing image:', image);
 
-    setState('Setting Questions...');
+    setState("Processing...");
 
-    await endpointRef.current.changePop({
-      components: [{
-        type: PopComponentType.INFERENCE,
-        id: 2,
-        ability: 'eyepop.image-contents:latest',
-        params: {
-          prompts: [{
-            prompt: "Analyze the image provided and determine the categories of: " +
-              questions.join(", ") +
-              ". Report the values of the categories as classLabels. If you are unable to provide a category with a value then set its classLabel to null"
-          }],
-        }
-      }]
+    const base64 = image.src.split(",")[1]; // remove data:image prefix
+
+    const response = await fetch("/api/ask-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ questions, imageBase64: base64 })
     });
 
-    setState('Processing...');
-
-    const results = await endpointRef.current.process({
-      file: image.file,
-      mimeType: 'image/*',
-    });
-
-    // const ctx = canvasRef.current ? canvasRef.current.getContext('2d') : null;
-    const collectedClasses = [];
-    for await (let result of results) {
-      console.log('Result:', result);
-      if (result.classes) {
-        collectedClasses.push(...result.classes);
-      }
-      break; // We only expect one result for the full image
-    }
-    setResultsClasses(collectedClasses);
-    setState('Results');
+    const data = await response.json();
+    setResultsClasses(data.classes || []);
+    setState("Results");
   };
 
   const fileInputRef = useRef(null);
@@ -162,7 +120,7 @@ function App() {
               <h3>Questions</h3>
               <ul className="questions-list">
                 {questions.map((q, i) => (
-                  
+
                   <li
                     key={i}
                     className="question-item"
@@ -198,7 +156,7 @@ function App() {
                 <button onClick={handleAddQuestion} className='eyepop-button'>
                   Add Question
                 </button>
-               
+
               </div>
             </>
           )}
