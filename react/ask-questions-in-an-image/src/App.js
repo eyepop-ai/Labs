@@ -7,24 +7,70 @@ function App() {
     document.title = "Ask Questions of an Image | EyePop.ai";
   }, []);
 
+  const questionSets = {
+    "Image Description": [
+      "What objects are present in the image? (Comma delimited list)",
+      "What is the dominant color of the image?",
+      "Was the image taken indoors or outdoors?",
+      "Describe this image in one sentence.",
+      "Describe this image in one paragraph.",
+      "What is the mood of the image (happy, sad, neutral)?",
+      
+
+    ],
+    "Content Monitoring": [
+      "What content is present in the image? (Comma delimited list)",
+      "What is the context of the image? (one sentence)",
+      "Are there any explicit or inappropriate elements in the image? (Yes/No)",
+      "Are there any violent elements in the image? (Yes/No)",
+      "Are there any political elements in the image? (Yes/No)",
+      "Are there any religious elements in the image? (Yes/No)",
+      "Are there any medical elements in the image? (Yes/No)",
+      "Are there any legal elements in the image? (Yes/No)"
+
+    ],
+    "Car Inspection": [
+      "What is the overall condition of the car (good, worn, damaged)?",
+      "What is the color of the car?",
+      "What is the condition of the tires (good, worn, damaged)?"
+    ],
+    "Home Inspection": [
+      "What is the condition of the roof (intact, damaged)?",
+      "What is the condition of the walls (no cracks, cracked)?",
+      "What is the condition of the paint (intact, peeling)?"
+    ],
+    "Person Style": [
+      "What type of clothing is the person wearing?",
+      "What accessories is the person wearing?",
+      "What is the person’s hair color?"
+    ],
+    "Person Action": [
+      "What is the person doing (1-2 words for the action)?",
+      "What object is the person holding?",
+      "What is the person’s facial expression (smiling, neutral, frowning)?"
+    ],
+    "Fireplace Inspection": [
+      "What is the cleanliness of the fireplace interior (clean, soot buildup, creosote buildup)?",
+      "What are the visible safety concerns with the fireplace (none, blockage potential)?",
+      "What is the overall condition of the fireplace (good, worn, structural concerns)?",
+      "Is there visible water damage around the fireplace (Yes/No)?",
+      "What is the condition of fireplace ventilation (clear, obstructed)?"
+    ],
+    "Water Heater Inspection": [
+      "What type of water heater is this (tank, tankless)?",
+      "Is the water heater showing signs of rust or corrosion (Yes/No)?",
+      "Is the water heater showing signs of leaking (Yes/No)?",
+      "What is the fuel type of the water heater (gas, electric)?",
+      "What is the brand of the water heater?",
+      "What is the color of the water heater?",
+      "What is the shape of the water heater?",
+      "What is the overall condition of the water heater (new, old, damaged)?"
+    ]
+  };
+
+  const [selectedQuestionSet, setSelectedQuestionSet] = useState("Water Heater Inspection");
   const [image, setImage] = useState(null);
-  const [questions, setQuestions] = useState([
-    "Is the water heater in this image a tank or tankless model (tank/tankless)?",
-    "Is the water heater in this image showing signs of rust or corrosion (Yes/No)?",
-    "Is the water heater in this image showing signs of leaking (Yes/No)?",
-    "Is the water heater in this image a gas or electric model (gas/electric)?",
-    "What is the brand of the water heater in this image?",
-    "What is the color of the water heater in this image?",
-    "What is the shape of the water heater in this image?",
-    "What is the condition of the water heater in this image (new/old/damaged)?"
-
-    // "How clean is the fireplace interior (e.g., soot/creosote buildup, clean)?",
-    // "Are there any safety concerns visible with the fireplace (e.g., blockage potential)?",
-    // "What is the overall condition of the fireplace (e.g., good, worn, structural concerns)?",
-    // "Is there visible water damage around the fireplace (Yes/No)?",
-    // "Are there any ventilation issues with the fireplace (e.g., clear, obstructed)?"
-
-  ]);
+  const [questions, setQuestions] = useState(questionSets[selectedQuestionSet]);
   const [newQuestion, setNewQuestion] = useState('');
   const handleAddQuestion = () => {
     if (newQuestion.trim()) {
@@ -88,6 +134,12 @@ function App() {
     }
   };
 
+  const handleQuestionSetChange = (e) => {
+    const selectedSet = e.target.value;
+    setSelectedQuestionSet(selectedSet);
+    setQuestions(questionSets[selectedSet]);
+  };
+
   return (
     <div className="app-container">
       <HeaderBar />
@@ -117,6 +169,14 @@ function App() {
         <div className="sidebar" >
           {resultsClasses.length === 0 && (
             <>
+              <div style={{ marginBottom: '1rem' }}>
+                <label htmlFor="questionSetSelect" style={{ marginRight: '0.5rem' }}>Select Question Set:</label>
+                <select id="questionSetSelect" value={selectedQuestionSet} onChange={handleQuestionSetChange}>
+                  {Object.keys(questionSets).map((setName) => (
+                    <option key={setName} value={setName}>{setName}</option>
+                  ))}
+                </select>
+              </div>
               <h3>Questions</h3>
               <ul className="questions-list">
                 {questions.map((q, i) => (
@@ -145,7 +205,7 @@ function App() {
                   Remove All
                 </button>
               )}
-              <div style={{ marginTop: '3rem', display: 'flex', gap: '0.5rem' }}>
+              <div style={{ marginTop: '3rem', display: 'flex', gap: '0.5rem', maxWidth: '100%', width: '100%' }}>
                 <input
                   type="text"
                   placeholder="Enter a new question"
@@ -154,7 +214,7 @@ function App() {
                   style={{ width: '100%' }}
                 />
                 <button onClick={handleAddQuestion} className='eyepop-button'>
-                  Add Question
+                  Add
                 </button>
 
               </div>
@@ -166,9 +226,9 @@ function App() {
               <ul className="results-list">
                 {resultsClasses.map((cls, idx) => (
                   <li key={idx} className="result-item">
-                    Question: {cls.category}<br />
-                    Label: <strong>{cls.classLabel.toLowerCase() === "null" ? 'N/A' : cls.classLabel}</strong><br />
-                    Confidence: <strong>{(cls.confidence * 100).toFixed(1)}%</strong>
+                    {cls.category}<br />
+                    <strong>{cls.classLabel.toLowerCase() === "null" ? 'N/A' : cls.classLabel}</strong><br />
+                    <strong>{(cls.confidence * 100).toFixed(1)}%</strong> confidence
                   </li>
                 ))}
               </ul>

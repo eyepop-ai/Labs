@@ -52,6 +52,13 @@ body {
   height: 100%;
 }
 
+.sidebar input[type="text"] {
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 1rem;
+  margin-right: 1rem;
+}
+
 .questions-list {
   list-style: none;
   padding: 0;
@@ -140,4 +147,33 @@ body {
   align-items: center;
   padding: 1rem;
   margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    flex-direction: column;
+  }
+  .drop-zone {
+    height: 200px;
+    max-width: 100%;
+    overflow: hidden;
+    min-height: 30vh;
+  }
+  .sidebar {
+    width: 90%;
+    max-width: 90%;
+  }
+  .sidebar input[type="text"] {
+    width: 100%;
+    margin-right: 0;
+  }
+  .bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 95%;
+  }
+  .app-container {
+    padding-bottom: 60px; /* space for fixed bottom-bar */
+  }
 }
