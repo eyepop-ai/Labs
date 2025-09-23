@@ -47,6 +47,9 @@ body {
   padding: 1rem;
   background: #fff;
   overflow-y: auto;
+  align-self: flex-start;
+  max-height: 80vh;
+  height: 100%;
 }
 
 .questions-list {
@@ -64,12 +67,23 @@ body {
   font-size: 0.9rem;
 }
 
-.question-item button {
+
+.sidebar button, .question-item button {
   background: transparent;
   border: none;
-  color: #ff3eec;
+  color: #ff7a7a;
   cursor: pointer;
   font-size: 0.8rem;
+}
+.sidebar .eyepop-button {
+  background: #fff;
+  color: #1A1AFF;
+  border: 2px solid #1A1AFF;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
 }
 
 .results-list {
@@ -119,4 +133,11 @@ body {
 .bottom-bar button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.header-bar {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  margin-bottom: 1rem;
 }
