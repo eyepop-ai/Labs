@@ -1,0 +1,122 @@
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background: #f8faff;
+  color: #1a1a1a;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.main-content {
+  display: flex;
+  flex: 1;
+}
+
+.drop-zone {
+  flex: 1;
+  border: 2px dashed #1A1AFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  min-height: 50vh;
+}
+
+.drop-zone img, .drop-zone canvas {
+  max-width: 100%;
+  max-height: 600px;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+.drop-message {
+  text-align: center;
+  color: #999;
+  font-size: 1.2rem;
+}
+
+.sidebar {
+  width: 320px;
+  border-left: 1px solid #e0e0e0;
+  padding: 1rem;
+  background: #fafbff;
+  overflow-y: auto;
+}
+
+.questions-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.question-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9rem;
+}
+
+.question-item button {
+  background: transparent;
+  border: none;
+  color: #ff3eec;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.results-list {
+  list-style: none;
+  padding: 0;
+  margin-top: 1rem;
+}
+
+.result-item {
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.bottom-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-top: 1px solid #e0e0e0;
+  background: linear-gradient(90deg, #1A1AFF 0%, #00C6FF 100%);
+  color: #fff;
+}
+
+.bottom-bar .button-container {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.bottom-bar button {
+  background: #fff;
+  color: #1A1AFF;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.bottom-bar button:hover:not(:disabled) {
+  background: #f0f0ff;
+}
+
+.bottom-bar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
