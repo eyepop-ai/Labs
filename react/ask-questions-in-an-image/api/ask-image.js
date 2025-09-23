@@ -29,10 +29,10 @@ export default async function handler(req, res) {
       }]
     });
 
-    const buffer = Buffer.from(imageBase64, "base64");
+    const blob = new Blob([Buffer.from(imageBase64, "base64")], { type: "image/png" });
     const results = await endpoint.process({
-      file: buffer,
-      mimeType: "image/*"
+      file: blob,
+      mimeType: "image/png"
     });
 
     let collected = [];
