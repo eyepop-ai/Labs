@@ -1,8 +1,12 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { EyePop, PopComponentType } from '@eyepop.ai/eyepop';
 import './App.css';
 
 function App() {
+  useEffect(() => {
+    document.title = "Ask Questions of an Image | EyePop.ai";
+  }, []);
+
   const [image, setImage] = useState(null);
   const [questions, setQuestions] = useState([
     "Is the water heater in this image a tank or tankless model (tank/tankless)?",
