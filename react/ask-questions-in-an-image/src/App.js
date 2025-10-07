@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { EyePop, PopComponentType } from '@eyepop.ai/eyepop';
+import { Link } from 'react-router-dom';
+import Login from './Login';
 import './App.css';
 
 function App() {
@@ -7,6 +8,7 @@ function App() {
     document.title = "Ask Questions of an Image | EyePop.ai";
   }, []);
 
+  // Define question sets first (needed for initial state)
   const questionSets = {
     "Image Description": [
       "What objects are present in the image? (Comma delimited list)",
@@ -68,10 +70,63 @@ function App() {
     ]
   };
 
+  // ALL state hooks must be declared before any conditional returns
+  // Authentication state - persist in sessionStorage
+  const [apiKey, setApiKey] = useState(() => {
+    return sessionStorage.getItem('eyepop_api_key') || null;
+  });
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return sessionStorage.getItem('eyepop_authenticated') === 'true';
+  });
+
+  // App state
   const [selectedQuestionSet, setSelectedQuestionSet] = useState("Water Heater Inspection");
   const [image, setImage] = useState(null);
   const [questions, setQuestions] = useState(questionSets[selectedQuestionSet]);
   const [newQuestion, setNewQuestion] = useState('');
+  const [state, setState] = useState('Ready');
+  const [resultsClasses, setResultsClasses] = useState([]);
+  const fileInputRef = useRef(null);
+
+  // ALL useCallback hooks must be declared before conditional returns
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => setImage({ src: reader.result, file });
+      reader.readAsDataURL(file);
+    }
+  }, []);
+
+  // Auth handlers
+  const handleLogin = (key) => {
+    setApiKey(key);
+    setIsAuthenticated(true);
+    // Persist to sessionStorage
+    sessionStorage.setItem('eyepop_api_key', key);
+    sessionStorage.setItem('eyepop_authenticated', 'true');
+  };
+
+  const handleLogout = () => {
+    setApiKey(null);
+    setIsAuthenticated(false);
+    // Clear sessionStorage
+    sessionStorage.removeItem('eyepop_api_key');
+    sessionStorage.removeItem('eyepop_authenticated');
+    // Reset all state when logging out
+    setImage(null);
+    setQuestions(questionSets[selectedQuestionSet]);
+    setResultsClasses([]);
+    setState('Ready');
+  };
+
+  // If not authenticated, show login page (AFTER all hooks)
+  if (!isAuthenticated) {
+    return <Login onLogin={handleLogin} />;
+  }
+
+  // Regular event handlers
   const handleAddQuestion = () => {
     if (newQuestion.trim()) {
       setQuestions([...questions, newQuestion.trim()]);
@@ -82,19 +137,6 @@ function App() {
   const handleRemoveQuestion = (idx) => {
     setQuestions((qs) => qs.filter((_, i) => i !== idx));
   };
-  const [state, setState] = useState('Ready');
-  const [resultsClasses, setResultsClasses] = useState([]);
-  const endpointRef = useRef(null);
-
-  const handleDrop = useCallback((e) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => setImage({ src: reader.result, file });
-      reader.readAsDataURL(file);
-    }
-  }, []);
 
   const handleDragOver = (e) => e.preventDefault();
 
@@ -108,15 +150,13 @@ function App() {
     const response = await fetch("/api/ask-image", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ questions, imageBase64: base64 })
+      body: JSON.stringify({ questions, imageBase64: base64, apiKey })
     });
 
     const data = await response.json();
     setResultsClasses(data.classes || []);
     setState("Results");
   };
-
-  const fileInputRef = useRef(null);
 
   const handleDropZoneClick = () => {
     if (fileInputRef.current) {
@@ -142,7 +182,7 @@ function App() {
 
   return (
     <div className="app-container">
-      <HeaderBar />
+      <HeaderBar onLogout={handleLogout} />
       <div className="main-content">
         <div
           className="drop-zone"
@@ -251,7 +291,7 @@ function App() {
         <div>
           <button
             onClick={handleContinue}
-            disabled={(state != 'Ready' && state != 'Results') || !image}
+            disabled={(state !== 'Ready' && state !== 'Results') || !image}
           >Continue</button>
         </div>
       </div>
@@ -260,7 +300,7 @@ function App() {
 }
 
 // Add a header bar with eyepop.ai's logo
-function HeaderBar() {
+function HeaderBar({ onLogout }) {
   return (
     <header className="header-bar">
       <img
@@ -269,6 +309,11 @@ function HeaderBar() {
         style={{ height: 40, marginRight: 16 }}
       />
       <span style={{ fontSize: '2rem', fontWeight: 'bold' }}>Image Q&A Demo</span>
+      <div style={{ marginLeft: 'auto', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <Link to="/" style={{ color: '#1A1AFF', textDecoration: 'none', fontWeight: '600' }}>Image Q&A</Link>
+        <Link to="/detect-and-ask" style={{ color: '#1A1AFF', textDecoration: 'none', fontWeight: '600' }}>Detect + Ask</Link>
+        <button onClick={onLogout} className="logout-button">Logout</button>
+      </div>
     </header>
   );
 }

@@ -74,11 +74,13 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/t
 Ask Questions of an Image is a React app that allows you to drag and drop an image, define a list of questions, and get answers powered by [EyePop.ai](https://eyepop.ai). The app is styled with EyePop branding for a seamless user experience.
 
 ## Features
+- **User Authentication**: Secure login with EyePop.ai credentials before accessing the app.
 - **Drag-and-drop image upload**: Easily upload images by dragging and dropping.
 - **Question list**: Add and remove questions to ask about your image.
 - **EyePop.ai integration**: Processes your image and questions using the EyePop.ai API.
 - **Results display**: See answers to your questions, visually connected to your image.
 - **Branded styling**: Clean, modern UI with EyePop branding.
+- **Two modes**: Standard Image Q&A and Detect + Ask for object detection with Q&A.
 
 ## Installation
 1. **Clone the repository:**
@@ -90,12 +92,13 @@ Ask Questions of an Image is a React app that allows you to drag and drop an ima
    ```bash
    npm install
    ```
-3. **Set up environment variables:**
-   - Create a `.env` file in the root directory.
+3. **Set up environment variables (optional):**
+   - Create a `.env` file in the root directory if you want to use a default API key.
    - Add your EyePop.ai API key:
      ```
-     NEXT_PUBLIC_ANYTHING_POP_API_KEY=your_eyepop_api_key_here
+     EYEPOP_API_KEY=your_eyepop_api_key_here
      ```
+   - Note: Users can also authenticate with their own credentials through the login page.
 
 ## Usage
 1. **Start the development server:**
@@ -103,22 +106,36 @@ Ask Questions of an Image is a React app that allows you to drag and drop an ima
    npm start
    ```
 2. **Open the app** in your browser at [http://localhost:3000](http://localhost:3000).
-3. **Drag and drop an image** into the upload area.
-4. **Add your questions** to the list (you can add or remove questions).
-5. **Click "Continue"** to process your image and questions with EyePop.ai.
-6. **View the results**: Answers will be displayed alongside your image.
+3. **Login with your EyePop credentials:**
+   - Enter your EyePop.ai API key on the login page.
+   - The app will validate your credentials before granting access.
+   - Don't have an API key? [Sign up at EyePop.ai](https://dashboard.eyepop.ai)
+4. **Choose your mode:**
+   - **Image Q&A**: Ask questions about an entire image
+   - **Detect + Ask**: Detect specific objects and ask questions about each detection
+5. **Drag and drop an image** into the upload area.
+6. **Add your questions** to the list (you can add or remove questions).
+7. **Click "Continue"** to process your image and questions with EyePop.ai.
+8. **View the results**: Answers will be displayed alongside your image.
+9. **Logout**: Click the logout button in the header to end your session.
 
 ## Environment Variables
-- `NEXT_PUBLIC_ANYTHING_POP_API_KEY`: Your EyePop.ai API key. Required for API access.
+- `EYEPOP_API_KEY` (optional): Default EyePop.ai API key for server-side fallback. Users can also authenticate with their own credentials through the login page.
 
 ## Tech Stack
 - **React**: UI framework
 - **EyePop.ai SDK**: Image and question processing
 - **CSS**: Custom styling with EyePop branding
 
+## Security
+- User credentials are validated against the EyePop.ai API before access is granted.
+- API keys are stored only in memory during the session and are not persisted.
+- Each API request uses the authenticated user's credentials.
+
 ## Future Improvements
 - Support for multiple images
 - Richer result visualizations and answer explanations
 - Improved error handling and user feedback
 - Mobile/responsive design enhancements
-- User authentication and history of past queries
+- Persistent authentication with secure token storage
+- Query history and saved question sets
