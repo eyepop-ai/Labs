@@ -34,7 +34,8 @@ function App() {
     "Car Inspection": [
       "What is the overall condition of the car (good, worn, damaged)?",
       "What is the color of the car?",
-      "What is the condition of the tires (good, worn, damaged)?"
+      "What is the condition of the tires (good, worn, damaged)?",
+      "What part of the car can you see clearly? (Front Driver side/Front Passenger side/Rear Driver side/Rear Passenger side/Top/Undercarriage/Front head on/Back head on)."
     ],
     "Home Inspection": [
       "What is the condition of the roof (intact, damaged)?",
