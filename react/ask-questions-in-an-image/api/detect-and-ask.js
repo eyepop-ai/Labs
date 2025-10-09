@@ -20,36 +20,40 @@ export default async function handler(req, res) {
       stopJobs: false
     }).connect();
 
-    // Configure the pipeline: localize-objects → crop → image-contents
-    await endpoint.changePop({
+    // Configure the pipeline: localize-objects → crop → image-contents (if questions provided)
+    const popConfig = {
       components: [{
         type: PopComponentType.INFERENCE,
-        ability: 'ci-eyepop.localize-objects:component-api-v8.2.16',
+        ability: 'eyepop.localize-objects:latest',
         params: {
-          prompts: [
-            { prompt: detectPrompt }
-          ]
+          
+            prompt: detectPrompt 
+          
         },
-        // Forward cropped detections to image-contents for analysis
-        forward: {
-          operator: {
-            type: ForwardOperatorType.CROP,
-          },
-          targets: [{
-            type: PopComponentType.INFERENCE,
-            ability: 'eyepop.image-contents:latest',
-            params: {
-              prompts: [{
-                prompt:
-                  "Analyze the image provided and determine the categories of: " +
-                  questions.join(", ") +
-                  ". Report the values of the categories as classLabels. If you are unable to provide a category with a value then set its classLabel to null"
-              }]
-            }
-          }]
-        }
+        // Only add forward pipeline if questions are provided
+        ...(questions && questions.length > 0 ? {
+          forward: {
+            operator: {
+              type: ForwardOperatorType.CROP,
+            },
+            targets: [{
+              type: PopComponentType.INFERENCE,
+              ability: 'eyepop.image-contents:latest',
+              params: {
+                prompts: [{
+                  prompt:
+                    "Analyze the image provided and determine the categories of: " +
+                    questions.join(", ") +
+                    ". Report the values of the categories as classLabels. If you are unable to provide a category with a value then set its classLabel to null"
+                }]
+              }
+            }]
+          }
+        } : {})
       }]
-    });
+    };
+
+    await endpoint.changePop(popConfig);
 
     const blob = new Blob([Buffer.from(imageBase64, "base64")], { type: "image/png" });
     const results = await endpoint.process({

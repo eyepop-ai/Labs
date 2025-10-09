@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './index.css';
 import App from './App';
 import DetectAndAsk from './DetectAndAsk';
+import PersonDetection from './PersonDetection';
 import reportWebVitals from './reportWebVitals';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -13,6 +14,7 @@ root.render(
       <Routes>
         <Route path="/" element={<App />} />
         <Route path="/detect-and-ask" element={<DetectAndAsk />} />
+        <Route path="/person-detection" element={<PersonDetection />} />
       </Routes>
     </Router>
   </React.StrictMode>

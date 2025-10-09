@@ -3,38 +3,9 @@ import { Link } from 'react-router-dom';
 import Login from './Login';
 import './App.css';
 
-// Memoized detection card component for better performance
-const DetectionCard = React.memo(({ detection, detIdx }) => (
-  <div 
-    style={{ 
-      marginBottom: '2rem', 
-      padding: '1rem', 
-      background: '#f8f8f8', 
-      borderRadius: '4px',
-      willChange: 'transform',
-      transform: 'translateZ(0)'
-    }}
-  >
-    <h5 style={{ marginTop: 0 }}>Detection {detIdx + 1}</h5>
-    {detection.classes && detection.classes.length > 0 ? (
-      <ul className="results-list">
-        {detection.classes.map((cls, idx) => (
-          <li key={`${cls.category}-${idx}`} className="result-item">
-            {cls.category}<br />
-            <strong>{cls.classLabel && cls.classLabel.toLowerCase() === "null" ? 'N/A' : cls.classLabel}</strong><br />
-            <strong>{(cls.confidence * 100).toFixed(1)}%</strong> confidence
-          </li>
-        ))}
-      </ul>
-    ) : (
-      <p>No analysis results</p>
-    )}
-  </div>
-));
-
-function DetectAndAsk() {
+function PersonDetection() {
   useEffect(() => {
-    document.title = "Detect Anything + Ask Anything | EyePop.ai";
+    document.title = "Person Detection | EyePop.ai";
   }, []);
 
   // ALL state hooks must be declared before any conditional returns
@@ -48,14 +19,7 @@ function DetectAndAsk() {
 
   // App state
   const [image, setImage] = useState(null);
-  const [detectPrompt, setDetectPrompt] = useState('water heater');
   const [confidenceThreshold, setConfidenceThreshold] = useState(0.3);
-  const [questions, setQuestions] = useState([
-    "What is the overall condition of the detected object (new, old, damaged)?",
-    "What is the color of the detected object?",
-    "What material is the detected object made of?"
-  ]);
-  const [newQuestion, setNewQuestion] = useState('');
   const [state, setState] = useState('Ready');
   const [detections, setDetections] = useState([]);
   const [allDetections, setAllDetections] = useState([]);
@@ -84,12 +48,6 @@ function DetectAndAsk() {
     setDetections([]);
     setAllDetections([]);
     setState('Ready');
-    setDetectPrompt('water heater');
-    setQuestions([
-      "What is the overall condition of the detected object (new, old, damaged)?",
-      "What is the color of the detected object?",
-      "What material is the detected object made of?"
-    ]);
   };
 
   // ALL useCallback and useEffect hooks must also be declared before conditional returns
@@ -137,7 +95,7 @@ function DetectAndAsk() {
           ctx.strokeRect(x, y, bboxWidth, bboxHeight);
 
           // Draw label background
-          const label = obj.classLabel || detectPrompt;
+          const label = obj.classLabel || 'person';
           const fontSize = Math.max(32, canvas.width / 50);
           ctx.font = `${fontSize}px Inter, sans-serif`;
           const textWidth = ctx.measureText(label).width;
@@ -152,7 +110,7 @@ function DetectAndAsk() {
         });
       }
     });
-  }, [detectPrompt]);
+  }, []);
 
   // Use useMemo to optimize filtering performance
   const filteredDetections = useMemo(() => {
@@ -160,14 +118,11 @@ function DetectAndAsk() {
     
     return allDetections.filter(detection => {
       if (detection.objects && detection.objects.length > 0) {
-        const meetsConfidence = detection.objects[0].confidence >= confidenceThreshold;
-        const hasAnalysis = detection.classes && detection.classes.length > 0;
-        // If no questions, only check confidence. If questions exist, require both confidence and analysis
-        return questions.length > 0 ? (meetsConfidence && hasAnalysis) : meetsConfidence;
+        return detection.objects[0].confidence >= confidenceThreshold;
       }
       return false;
     });
-  }, [allDetections, confidenceThreshold, questions]);
+  }, [allDetections, confidenceThreshold]);
 
   // Update detections and redraw when filtered detections change
   useEffect(() => {
@@ -209,18 +164,7 @@ function DetectAndAsk() {
     return <Login onLogin={handleLogin} />;
   }
 
-  // Regular event handlers (not hooks, can be after conditional return in theory, but keeping here for clarity)
-  const handleAddQuestion = () => {
-    if (newQuestion.trim()) {
-      setQuestions([...questions, newQuestion.trim()]);
-      setNewQuestion('');
-    }
-  };
-
-  const handleRemoveQuestion = (idx) => {
-    setQuestions((qs) => qs.filter((_, i) => i !== idx));
-  };
-
+  // Regular event handlers
   const handleDragOver = (e) => e.preventDefault();
 
   const handleDropZoneClick = () => {
@@ -240,7 +184,7 @@ function DetectAndAsk() {
   };
 
   const handleContinue = async () => {
-    if (!image || !detectPrompt.trim()) return;
+    if (!image) return;
 
     setState("Processing...");
     setDetections([]);
@@ -248,12 +192,10 @@ function DetectAndAsk() {
     const base64 = image.src.split(",")[1];
 
     try {
-      const response = await fetch("/api/detect-and-ask", {
+      const response = await fetch("/api/person-detection", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          detectPrompt: detectPrompt.trim(), 
-          questions, 
           imageBase64: base64,
           apiKey
         })
@@ -266,14 +208,9 @@ function DetectAndAsk() {
         setAllDetections(data.detections);
         
         // Filter by confidence threshold
-        // If questions were asked, also require analysis results
         const filtered = data.detections.filter(detection => {
           if (detection.objects && detection.objects.length > 0) {
-            const meetsConfidence = detection.objects[0].confidence >= confidenceThreshold;
-            const hasAnalysis = detection.classes && detection.classes.length > 0;
-            // If no questions were asked, only check confidence
-            // If questions were asked, require both confidence and analysis
-            return questions.length > 0 ? (meetsConfidence && hasAnalysis) : meetsConfidence;
+            return detection.objects[0].confidence >= confidenceThreshold;
           }
           return false;
         });
@@ -295,7 +232,7 @@ function DetectAndAsk() {
         
         setState("Results");
       } else {
-        setState("No detections found");
+        setState("No persons found");
         setTimeout(() => setState("Ready"), 2000);
       }
     } catch (error) {
@@ -350,15 +287,6 @@ function DetectAndAsk() {
         <div className="sidebar">
           {detections.length === 0 && (
             <>
-              <h3>What to Detect</h3>
-              <input
-                type="text"
-                placeholder="e.g., water heater, car, person"
-                value={detectPrompt}
-                onChange={(e) => setDetectPrompt(e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
-              />
-              
               <div style={{ marginBottom: '1.5rem' }}>
                 <label htmlFor="confidenceSlider" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
                   Confidence Threshold: {(confidenceThreshold * 100).toFixed(0)}%
@@ -378,43 +306,6 @@ function DetectAndAsk() {
                   <span>50%</span>
                   <span>100%</span>
                 </div>
-              </div>
-              
-              <h3>Questions to Ask</h3>
-              <ul className="questions-list">
-                {questions.map((q, i) => (
-                  <li key={i} className="question-item">
-                    <span>{q}</span>
-                    <button
-                      onClick={() => handleRemoveQuestion(i)}
-                      aria-label={`Remove question ${i + 1}`}
-                      title="Remove"
-                    >
-                      Remove
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              {questions.length > 1 && (
-                <button
-                  onClick={() => setQuestions([])}
-                  disabled={questions.length === 0}
-                  style={{ float: 'right', marginTop: '.5rem' }}
-                >
-                  Remove All
-                </button>
-              )}
-              <div style={{ marginTop: '3rem', display: 'flex', gap: '0.5rem', maxWidth: '100%', width: '100%' }}>
-                <input
-                  type="text"
-                  placeholder="Enter a new question"
-                  value={newQuestion}
-                  onChange={(e) => setNewQuestion(e.target.value)}
-                  style={{ width: '100%' }}
-                />
-                <button onClick={handleAddQuestion} className='eyepop-button'>
-                  Add
-                </button>
               </div>
             </>
           )}
@@ -440,44 +331,26 @@ function DetectAndAsk() {
                   <span>100%</span>
                 </div>
                 <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.5rem', marginBottom: 0 }}>
-                  Showing {detections.length} of {allDetections.length} detection{allDetections.length !== 1 ? 's' : ''}
-                  {questions.length > 0 ? ' with analysis results' : ''}
+                  Showing {detections.length} of {allDetections.length} person{allDetections.length !== 1 ? 's' : ''}
                 </p>
-                {questions.length > 0 && (
-                  <p style={{ fontSize: '0.75rem', color: '#999', marginTop: '0.25rem', marginBottom: 0 }}>
-                    (Only showing detections that have Q&A answers)
-                  </p>
-                )}
               </div>
               
-              <h4>Results ({detections.length} detection{detections.length !== 1 ? 's' : ''})</h4>
+              <h4>Results ({detections.length} person{detections.length !== 1 ? 's' : ''})</h4>
               <div style={{ willChange: 'contents', contain: 'layout style paint' }}>
-                {questions.length > 0 ? (
-                  // Show Q&A results when questions were asked
-                  detections.map((detection, detIdx) => (
-                    <DetectionCard 
-                      key={`detection-${detection.objects[0]?.id || detIdx}`}
-                      detection={detection}
-                      detIdx={detIdx}
-                    />
-                  ))
-                ) : (
-                // Show simple summary when no questions were asked
                 <div style={{ padding: '1.5rem', background: '#f8f8f8', borderRadius: '4px', textAlign: 'center' }}>
-                  <h3 style={{ margin: '0 0 0.5rem 0', color: '#1A1AFF' }}>✓ Detections Complete</h3>
+                  <h3 style={{ margin: '0 0 0.5rem 0', color: '#1A1AFF' }}>✓ Person Detection Complete</h3>
                   <p style={{ fontSize: '1.1rem', margin: '0.5rem 0', fontWeight: '600' }}>
-                    Found {detections.length} "{detectPrompt}" object{detections.length !== 1 ? 's' : ''}
+                    Found {detections.length} person{detections.length !== 1 ? 's' : ''}
                   </p>
                   <p style={{ fontSize: '0.9rem', color: '#666', margin: '0.5rem 0' }}>
                     Bounding boxes are shown on the image above
                   </p>
                   {allDetections.length > detections.length && (
                     <p style={{ fontSize: '0.85rem', color: '#999', margin: '0.5rem 0' }}>
-                      ({allDetections.length - detections.length} additional detection{allDetections.length - detections.length !== 1 ? 's' : ''} below confidence threshold)
+                      ({allDetections.length - detections.length} additional person{allDetections.length - detections.length !== 1 ? 's' : ''} below confidence threshold)
                     </p>
                   )}
                 </div>
-                )}
               </div>
               <button
                 onClick={() => {
@@ -515,7 +388,7 @@ function DetectAndAsk() {
             maxHeight: '300px',
             lineHeight: '1.5'
           }}>
-{`const { EyePop, PopComponentType, ForwardOperatorType } = require("@eyepop.ai/eyepop");
+{`const { EyePop, PopComponentType } = require("@eyepop.ai/eyepop");
 
 const endpoint = await EyePop.workerEndpoint({
   auth: { secretKey: "YOUR_API_KEY" },
@@ -525,24 +398,7 @@ const endpoint = await EyePop.workerEndpoint({
 await endpoint.changePop({
   components: [{
     type: PopComponentType.INFERENCE,
-    ability: "eyepop.localize-objects:latest",
-    params: {
-      prompt: "${detectPrompt}"
-    }${questions.length > 0 ? `,
-    forward: {
-      operator: {
-        type: ForwardOperatorType.CROP
-      },
-      targets: [{
-        type: PopComponentType.INFERENCE,
-        ability: "eyepop.image-contents:latest",
-        params: {
-          prompts: [{
-            prompt: "Analyze the image provided and determine the categories of: ${questions.join(', ')}. Report the values of the categories as classLabels. If you are unable to provide a category with a value then set its classLabel to null"
-          }]
-        }
-      }]
-    }` : ''}
+    ability: "eyepop.person:latest"
   }]
 });
 
@@ -560,8 +416,7 @@ for await (let result of results) {
   if (result.objects && result.objects.length > 0) {
     result.objects.forEach((obj) => {
       detections.push({
-        objects: [obj],
-        classes: obj.classes || []
+        objects: [obj]
       });
     });
   }
@@ -577,7 +432,7 @@ console.log(detections);`}
         <div>
           <button
             onClick={handleContinue}
-            disabled={(state !== 'Ready' && state !== 'Results') || !image || !detectPrompt.trim()}
+            disabled={(state !== 'Ready' && state !== 'Results') || !image}
           >Continue</button>
         </div>
       </div>
@@ -593,7 +448,7 @@ function HeaderBar({ onLogout }) {
         alt="EyePop Logo"
         style={{ height: 40, marginRight: 16 }}
       />
-      <span style={{ fontSize: '2rem', fontWeight: 'bold' }}>Detect Anything + Ask Anything</span>
+      <span style={{ fontSize: '2rem', fontWeight: 'bold' }}>Person Detection</span>
       <div style={{ marginLeft: 'auto', display: 'flex', gap: '1rem', alignItems: 'center' }}>
         <Link to="/" style={{ color: '#1A1AFF', textDecoration: 'none', fontWeight: '600' }}>Image Q&A</Link>
         <Link to="/detect-and-ask" style={{ color: '#1A1AFF', textDecoration: 'none', fontWeight: '600' }}>Detect + Ask</Link>
@@ -604,10 +459,11 @@ function HeaderBar({ onLogout }) {
   );
 }
 
-export default function DetectAndAskWithHeader(props) {
+export default function PersonDetectionWithHeader(props) {
   return (
     <>
-      <DetectAndAsk {...props} />
+      <PersonDetection {...props} />
     </>
   );
 }
+

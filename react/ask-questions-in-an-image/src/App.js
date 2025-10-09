@@ -286,6 +286,67 @@ function App() {
           )}
         </div>
       </div>
+
+      {/* Code Example Section - Below main content, above bottom bar */}
+      {resultsClasses.length > 0 && (
+        <div style={{ 
+          padding: '1rem 2rem', 
+          background: '#fff', 
+          borderTop: '1px solid #e0e0e0'
+        }}>
+          <h4 style={{ margin: '0 0 0.75rem 0', color: '#333' }}>📋 Example Code</h4>
+          <pre style={{ 
+            background: '#f5f5f5', 
+            border: '1px solid #ddd',
+            color: '#333', 
+            padding: '1rem', 
+            borderRadius: '6px', 
+            overflow: 'auto',
+            fontSize: '0.8rem',
+            margin: 0,
+            maxHeight: '300px',
+            lineHeight: '1.5'
+          }}>
+{`const { EyePop, PopComponentType } = require("@eyepop.ai/eyepop");
+
+const endpoint = await EyePop.workerEndpoint({
+  auth: { secretKey: "YOUR_API_KEY" },
+  stopJobs: false
+}).connect();
+
+await endpoint.changePop({
+  components: [{
+    type: PopComponentType.INFERENCE,
+    ability: "eyepop.image-contents:latest",
+    params: {
+      prompts: [{
+        prompt: "Analyze the image provided and determine the categories of: ${questions.join(', ')}. Report the values of the categories as classLabels."
+      }]
+    }
+  }]
+});
+
+const blob = new Blob([Buffer.from(imageBase64, "base64")], { 
+  type: "image/png" 
+});
+
+const results = await endpoint.process({
+  file: blob,
+  mimeType: "image/png"
+});
+
+let collected = [];
+for await (let result of results) {
+  if (result.classes) {
+    collected.push(...result.classes);
+  }
+}
+
+console.log(collected);`}
+          </pre>
+        </div>
+      )}
+
       <div className="bottom-bar">
         <div>State: {state}</div>
         <div>
@@ -312,6 +373,7 @@ function HeaderBar({ onLogout }) {
       <div style={{ marginLeft: 'auto', display: 'flex', gap: '1rem', alignItems: 'center' }}>
         <Link to="/" style={{ color: '#1A1AFF', textDecoration: 'none', fontWeight: '600' }}>Image Q&A</Link>
         <Link to="/detect-and-ask" style={{ color: '#1A1AFF', textDecoration: 'none', fontWeight: '600' }}>Detect + Ask</Link>
+        <Link to="/person-detection" style={{ color: '#1A1AFF', textDecoration: 'none', fontWeight: '600' }}>Person Detection</Link>
         <button onClick={onLogout} className="logout-button">Logout</button>
       </div>
     </header>
