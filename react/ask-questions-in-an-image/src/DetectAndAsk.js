@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import Login from './Login';
 import './App.css';
 
@@ -59,6 +61,8 @@ function DetectAndAsk() {
   const [state, setState] = useState('Ready');
   const [detections, setDetections] = useState([]);
   const [allDetections, setAllDetections] = useState([]);
+  const [showObjectDetections, setShowObjectDetections] = useState(true);
+  const [showQAResults, setShowQAResults] = useState(true);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
   const animationFrameRef = useRef(null);
@@ -105,8 +109,7 @@ function DetectAndAsk() {
 
   const drawBoundingBoxes = useCallback((imageElement, detectionsData) => {
     const canvas = canvasRef.current;
-    if (!canvas) {
-      console.error('Canvas ref not available');
+    if (!canvas || !imageElement) {
       return;
     }
 
@@ -125,8 +128,8 @@ function DetectAndAsk() {
     // Clear and redraw the image first at full resolution
     ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
 
-    // Batch draw all bounding boxes
-    detectionsData.forEach((detection) => {
+    // Batch draw all bounding boxes with detection numbers
+    detectionsData.forEach((detection, detIdx) => {
       if (detection.objects && detection.objects.length > 0) {
         detection.objects.forEach((obj) => {
           const { x, y, width: bboxWidth, height: bboxHeight } = obj;
@@ -136,10 +139,10 @@ function DetectAndAsk() {
           ctx.lineWidth = 5;
           ctx.strokeRect(x, y, bboxWidth, bboxHeight);
 
-          // Draw label background
-          const label = obj.classLabel || detectPrompt;
+          // Draw label with detection number
+          const label = `#${detIdx + 1} - ${obj.classLabel || detectPrompt}`;
           const fontSize = Math.max(32, canvas.width / 50);
-          ctx.font = `${fontSize}px Inter, sans-serif`;
+          ctx.font = `bold ${fontSize}px Inter, sans-serif`;
           const textWidth = ctx.measureText(label).width;
           const labelHeight = fontSize + 20;
           
@@ -161,13 +164,12 @@ function DetectAndAsk() {
     return allDetections.filter(detection => {
       if (detection.objects && detection.objects.length > 0) {
         const meetsConfidence = detection.objects[0].confidence >= confidenceThreshold;
-        const hasAnalysis = detection.classes && detection.classes.length > 0;
-        // If no questions, only check confidence. If questions exist, require both confidence and analysis
-        return questions.length > 0 ? (meetsConfidence && hasAnalysis) : meetsConfidence;
+        // Always filter by confidence only - show all detections, Q&A results are optional
+        return meetsConfidence;
       }
       return false;
     });
-  }, [allDetections, confidenceThreshold, questions]);
+  }, [allDetections, confidenceThreshold]);
 
   // Update detections and redraw when filtered detections change
   useEffect(() => {
@@ -178,19 +180,23 @@ function DetectAndAsk() {
       cancelAnimationFrame(animationFrameRef.current);
     }
     
-    // Redraw canvas with filtered detections using requestAnimationFrame for smoothness
-    if (filteredDetections.length > 0 && image) {
+    // Only redraw if we have an image and allDetections (meaning we've processed an image)
+    if (image && allDetections.length > 0) {
       // Use cached image if available
       if (imageCache.current && imageCache.current.src === image.src) {
         animationFrameRef.current = requestAnimationFrame(() => {
-          drawBoundingBoxes(imageCache.current, filteredDetections);
+          if (canvasRef.current) {
+            drawBoundingBoxes(imageCache.current, filteredDetections);
+          }
         });
       } else {
         const img = new Image();
         img.onload = () => {
           imageCache.current = img;
           animationFrameRef.current = requestAnimationFrame(() => {
-            drawBoundingBoxes(img, filteredDetections);
+            if (canvasRef.current) {
+              drawBoundingBoxes(img, filteredDetections);
+            }
           });
         };
         img.src = image.src;
@@ -202,7 +208,7 @@ function DetectAndAsk() {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [filteredDetections, image, drawBoundingBoxes]);
+  }, [filteredDetections, image, allDetections.length, drawBoundingBoxes]);
 
   // If not authenticated, show login page (AFTER all hooks are declared)
   if (!isAuthenticated) {
@@ -259,21 +265,23 @@ function DetectAndAsk() {
         })
       });
 
+      // Check for 413 error (payload too large)
+      if (response.status === 413) {
+        setState("Image too large! Please use a smaller image (< 4MB recommended)");
+        setTimeout(() => setState("Ready"), 4000);
+        return;
+      }
+
       const data = await response.json();
       
       if (data.detections && data.detections.length > 0) {
         // Store all detections (will be filtered by threshold)
         setAllDetections(data.detections);
         
-        // Filter by confidence threshold
-        // If questions were asked, also require analysis results
+        // Filter by confidence threshold only
         const filtered = data.detections.filter(detection => {
           if (detection.objects && detection.objects.length > 0) {
-            const meetsConfidence = detection.objects[0].confidence >= confidenceThreshold;
-            const hasAnalysis = detection.classes && detection.classes.length > 0;
-            // If no questions were asked, only check confidence
-            // If questions were asked, require both confidence and analysis
-            return questions.length > 0 ? (meetsConfidence && hasAnalysis) : meetsConfidence;
+            return detection.objects[0].confidence >= confidenceThreshold;
           }
           return false;
         });
@@ -441,11 +449,10 @@ function DetectAndAsk() {
                 </div>
                 <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.5rem', marginBottom: 0 }}>
                   Showing {detections.length} of {allDetections.length} detection{allDetections.length !== 1 ? 's' : ''}
-                  {questions.length > 0 ? ' with analysis results' : ''}
                 </p>
                 {questions.length > 0 && (
                   <p style={{ fontSize: '0.75rem', color: '#999', marginTop: '0.25rem', marginBottom: 0 }}>
-                    (Only showing detections that have Q&A answers)
+                    ({detections.filter(d => d.classes && d.classes.length > 0).length} detection{detections.filter(d => d.classes && d.classes.length > 0).length !== 1 ? 's' : ''} with Q&A answers)
                   </p>
                 )}
               </div>
@@ -453,14 +460,90 @@ function DetectAndAsk() {
               <h4>Results ({detections.length} detection{detections.length !== 1 ? 's' : ''})</h4>
               <div style={{ willChange: 'contents', contain: 'layout style paint' }}>
                 {questions.length > 0 ? (
-                  // Show Q&A results when questions were asked
-                  detections.map((detection, detIdx) => (
-                    <DetectionCard 
-                      key={`detection-${detection.objects[0]?.id || detIdx}`}
-                      detection={detection}
-                      detIdx={detIdx}
-                    />
-                  ))
+                  // Show unified list with all detections
+                  <div>
+                    {detections.map((detection, detIdx) => {
+                      const hasQA = detection.classes && detection.classes.length > 0;
+                      return (
+                        <div 
+                          key={`detection-${detection.objects[0]?.id || detIdx}`}
+                          style={{ 
+                            marginBottom: '1rem', 
+                            padding: '1rem', 
+                            background: hasQA ? '#f0f9ff' : '#f8f8f8', 
+                            borderRadius: '6px',
+                            fontSize: '0.9rem',
+                            borderLeft: hasQA ? '4px solid #1A1AFF' : '4px solid #ccc',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                          }}
+                        >
+                          {/* Header with detection number and badge */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                            <div>
+                              <span style={{ 
+                                fontSize: '1.1rem', 
+                                fontWeight: 'bold', 
+                                color: '#1A1AFF',
+                                background: hasQA ? '#e0f0ff' : '#e8e8e8',
+                                padding: '0.25rem 0.5rem',
+                                borderRadius: '4px',
+                                marginRight: '0.5rem'
+                              }}>
+                                #{detIdx + 1}
+                              </span>
+                              <strong>{detection.objects[0]?.classLabel || detectPrompt}</strong>
+                            </div>
+                            {hasQA && (
+                              <span style={{ 
+                                fontSize: '0.75rem', 
+                                background: '#1A1AFF', 
+                                color: '#fff', 
+                                padding: '0.25rem 0.5rem', 
+                                borderRadius: '4px',
+                                fontWeight: '600'
+                              }}>
+                                💬 Q&A
+                              </span>
+                            )}
+                          </div>
+                          
+                          {/* Confidence */}
+                          <div style={{ color: '#666', marginBottom: '0.5rem' }}>
+                            Confidence: <strong>{(detection.objects[0]?.confidence * 100).toFixed(1)}%</strong>
+                          </div>
+                          
+                          {/* Q&A Results */}
+                          {hasQA && (
+                            <div style={{ 
+                              marginTop: '0.75rem', 
+                              paddingTop: '0.75rem', 
+                              borderTop: '1px solid #ddd',
+                              fontSize: '0.9rem'
+                            }}>
+                              {detection.classes.map((cls, idx) => (
+                                <div key={idx} style={{ 
+                                  marginBottom: '0.5rem',
+                                  padding: '0.5rem',
+                                  background: '#fff',
+                                  borderRadius: '4px'
+                                }}>
+                                  <div style={{ color: '#666', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                                    {cls.category}
+                                  </div>
+                                  <div style={{ color: '#333', fontWeight: '500' }}>
+                                    {cls.classLabel && cls.classLabel.toLowerCase() !== 'null' ? cls.classLabel : 'N/A'}
+                                  </div>
+                                  <div style={{ color: '#999', fontSize: '0.8rem', marginTop: '0.25rem' }}>
+                                    {(cls.confidence * 100).toFixed(1)}% confidence
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 ) : (
                 // Show simple summary when no questions were asked
                 <div style={{ padding: '1.5rem', background: '#f8f8f8', borderRadius: '4px', textAlign: 'center' }}>
@@ -503,18 +586,17 @@ function DetectAndAsk() {
           borderTop: '1px solid #e0e0e0'
         }}>
           <h4 style={{ margin: '0 0 0.75rem 0', color: '#333' }}>📋 Example Code</h4>
-          <pre style={{ 
-            background: '#f5f5f5', 
-            border: '1px solid #ddd',
-            color: '#333', 
-            padding: '1rem', 
-            borderRadius: '6px', 
-            overflow: 'auto',
-            fontSize: '0.8rem',
-            margin: 0,
-            maxHeight: '300px',
-            lineHeight: '1.5'
-          }}>
+          <SyntaxHighlighter 
+            language="javascript" 
+            style={vs}
+            customStyle={{
+              borderRadius: '6px',
+              margin: 0,
+              maxHeight: '400px',
+              fontSize: '0.85rem',
+              background: '#f5f5f5'
+            }}
+          >
 {`const { EyePop, PopComponentType, ForwardOperatorType } = require("@eyepop.ai/eyepop");
 
 const endpoint = await EyePop.workerEndpoint({
@@ -568,7 +650,7 @@ for await (let result of results) {
 }
 
 console.log(detections);`}
-          </pre>
+          </SyntaxHighlighter>
         </div>
       )}
 

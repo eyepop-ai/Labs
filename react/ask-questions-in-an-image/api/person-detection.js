@@ -24,7 +24,7 @@ export default async function handler(req, res) {
     const popConfig = {
       components: [{
         type: PopComponentType.INFERENCE,
-        ability: 'eyepop.person:latest'
+        ability: 'eyepop.common-objects:latest'
       }]
     };
 

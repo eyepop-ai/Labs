@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import Login from './Login';
 import './App.css';
 
@@ -63,8 +65,7 @@ function PersonDetection() {
 
   const drawBoundingBoxes = useCallback((imageElement, detectionsData) => {
     const canvas = canvasRef.current;
-    if (!canvas) {
-      console.error('Canvas ref not available');
+    if (!canvas || !imageElement) {
       return;
     }
 
@@ -133,19 +134,23 @@ function PersonDetection() {
       cancelAnimationFrame(animationFrameRef.current);
     }
     
-    // Redraw canvas with filtered detections using requestAnimationFrame for smoothness
-    if (filteredDetections.length > 0 && image) {
+    // Only redraw if we have an image and allDetections (meaning we've processed an image)
+    if (image && allDetections.length > 0) {
       // Use cached image if available
       if (imageCache.current && imageCache.current.src === image.src) {
         animationFrameRef.current = requestAnimationFrame(() => {
-          drawBoundingBoxes(imageCache.current, filteredDetections);
+          if (canvasRef.current) {
+            drawBoundingBoxes(imageCache.current, filteredDetections);
+          }
         });
       } else {
         const img = new Image();
         img.onload = () => {
           imageCache.current = img;
           animationFrameRef.current = requestAnimationFrame(() => {
-            drawBoundingBoxes(img, filteredDetections);
+            if (canvasRef.current) {
+              drawBoundingBoxes(img, filteredDetections);
+            }
           });
         };
         img.src = image.src;
@@ -157,7 +162,7 @@ function PersonDetection() {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [filteredDetections, image, drawBoundingBoxes]);
+  }, [filteredDetections, image, allDetections.length, drawBoundingBoxes]);
 
   // If not authenticated, show login page (AFTER all hooks are declared)
   if (!isAuthenticated) {
@@ -200,6 +205,13 @@ function PersonDetection() {
           apiKey
         })
       });
+
+      // Check for 413 error (payload too large)
+      if (response.status === 413) {
+        setState("Image too large! Please use a smaller image (< 4MB recommended)");
+        setTimeout(() => setState("Ready"), 4000);
+        return;
+      }
 
       const data = await response.json();
       
@@ -376,18 +388,17 @@ function PersonDetection() {
           borderTop: '1px solid #e0e0e0'
         }}>
           <h4 style={{ margin: '0 0 0.75rem 0', color: '#333' }}>📋 Example Code</h4>
-          <pre style={{ 
-            background: '#f5f5f5', 
-            border: '1px solid #ddd',
-            color: '#333', 
-            padding: '1rem', 
-            borderRadius: '6px', 
-            overflow: 'auto',
-            fontSize: '0.8rem',
-            margin: 0,
-            maxHeight: '300px',
-            lineHeight: '1.5'
-          }}>
+          <SyntaxHighlighter 
+            language="javascript" 
+            style={vs}
+            customStyle={{
+              borderRadius: '6px',
+              margin: 0,
+              maxHeight: '400px',
+              fontSize: '0.85rem',
+              background: '#f5f5f5'
+            }}
+          >
 {`const { EyePop, PopComponentType } = require("@eyepop.ai/eyepop");
 
 const endpoint = await EyePop.workerEndpoint({
@@ -423,7 +434,7 @@ for await (let result of results) {
 }
 
 console.log(detections);`}
-          </pre>
+          </SyntaxHighlighter>
         </div>
       )}
 

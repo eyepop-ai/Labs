@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import Login from './Login';
 import './App.css';
 
@@ -150,15 +152,28 @@ function App() {
 
     const base64 = image.src.split(",")[1]; // remove data:image prefix
 
-    const response = await fetch("/api/ask-image", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ questions, imageBase64: base64, apiKey })
-    });
+    try {
+      const response = await fetch("/api/ask-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questions, imageBase64: base64, apiKey })
+      });
 
-    const data = await response.json();
-    setResultsClasses(data.classes || []);
-    setState("Results");
+      // Check for 413 error (payload too large)
+      if (response.status === 413) {
+        setState("Image too large! Please use a smaller image (< 4MB recommended)");
+        setTimeout(() => setState("Ready"), 4000);
+        return;
+      }
+
+      const data = await response.json();
+      setResultsClasses(data.classes || []);
+      setState("Results");
+    } catch (error) {
+      console.error("Error:", error);
+      setState("Error processing image");
+      setTimeout(() => setState("Ready"), 3000);
+    }
   };
 
   const handleDropZoneClick = () => {
@@ -298,18 +313,17 @@ function App() {
           borderTop: '1px solid #e0e0e0'
         }}>
           <h4 style={{ margin: '0 0 0.75rem 0', color: '#333' }}>📋 Example Code</h4>
-          <pre style={{ 
-            background: '#f5f5f5', 
-            border: '1px solid #ddd',
-            color: '#333', 
-            padding: '1rem', 
-            borderRadius: '6px', 
-            overflow: 'auto',
-            fontSize: '0.8rem',
-            margin: 0,
-            maxHeight: '300px',
-            lineHeight: '1.5'
-          }}>
+          <SyntaxHighlighter 
+            language="javascript" 
+            style={vs}
+            customStyle={{
+              borderRadius: '6px',
+              margin: 0,
+              maxHeight: '400px',
+              fontSize: '1.10rem',
+              background: '#f5f5f5'
+            }}
+          >
 {`const { EyePop, PopComponentType } = require("@eyepop.ai/eyepop");
 
 const endpoint = await EyePop.workerEndpoint({
@@ -346,7 +360,7 @@ for await (let result of results) {
 }
 
 console.log(collected);`}
-          </pre>
+          </SyntaxHighlighter>
         </div>
       )}
 
