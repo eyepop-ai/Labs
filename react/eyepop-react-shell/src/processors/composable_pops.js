@@ -4,14 +4,14 @@ import { type } from "os";
 
 
 export const ComposablePops = {
-    
+
     MiniCargo: {
         components: [
             {
                 type: PopComponentType.INFERENCE,
                 categoryName: "minicargo",
                 //model: 'customer.pickleball:0.0.1',
-                modelUuid:'06812aeef64b7665800006bdbcc66fc5'
+                modelUuid: '06812aeef64b7665800006bdbcc66fc5'
             }
         ],
     },
@@ -21,7 +21,7 @@ export const ComposablePops = {
                 type: PopComponentType.INFERENCE,
                 categoryName: "paddle_spine",
                 //model: 'customer.pickleball:0.0.1',
-                modelUuid:'0682f61cad9e703e80009d9c69ff208b'
+                modelUuid: '0682f61cad9e703e80009d9c69ff208b'
                 //modelUuid:'0682bb49f81f7a3780006c8a441b9a8d'
             }
         ],
@@ -32,7 +32,7 @@ export const ComposablePops = {
             {
                 type: PopComponentType.INFERENCE,
                 categoryName: "paddle_spine",
-                model: 'cg1-solutions.pickleball.paddle.spine:latest', 
+                model: 'cg1-solutions.pickleball.paddle.spine:latest',
             }
         ],
     },
@@ -110,37 +110,37 @@ export const ComposablePops = {
                 model: 'cg1-solutions.pickleball.paddle.spine:latest',
             },
             {
-            type: PopComponentType.INFERENCE,
-            model: 'eyepop.person:latest',
-            categoryName: 'person',
-            forward: {
-                operator: {
-                    type: ForwardOperatorType.CROP,
-                    crop: {
-                        boxPadding: 0.25,
-                        maxItems: 128,
-                    }
-                },
-                targets: [{
-                    type: PopComponentType.INFERENCE,
-                    model: 'eyepop.person.palm:latest',
-                    forward: {
-                        operator: {
-                            type: ForwardOperatorType.CROP,
-                            crop: {
-                                includeClasses: ['hand circumference'],
-                                orientationTargetAngle: -90.0,
-                            }
-                        },
-                        targets: [{
-                            type: PopComponentType.INFERENCE,
-                            model: 'eyepop.person.3d-hand-points:latest',
-                            categoryName: '3d-hand-points'
-                        }]
-                    }
-                }]
-            }
-        }]
+                type: PopComponentType.INFERENCE,
+                model: 'eyepop.person:latest',
+                categoryName: 'person',
+                forward: {
+                    operator: {
+                        type: ForwardOperatorType.CROP,
+                        crop: {
+                            boxPadding: 0.25,
+                            maxItems: 128,
+                        }
+                    },
+                    targets: [{
+                        type: PopComponentType.INFERENCE,
+                        model: 'eyepop.person.palm:latest',
+                        forward: {
+                            operator: {
+                                type: ForwardOperatorType.CROP,
+                                crop: {
+                                    includeClasses: ['hand circumference'],
+                                    orientationTargetAngle: -90.0,
+                                }
+                            },
+                            targets: [{
+                                type: PopComponentType.INFERENCE,
+                                model: 'eyepop.person.3d-hand-points:latest',
+                                categoryName: '3d-hand-points'
+                            }]
+                        }
+                    }]
+                }
+            }]
     },
     SAM2: {
         components: [
@@ -225,4 +225,56 @@ export const ComposablePops = {
         ],
     },
 
+    PickleballFull: {
+        components: [
+            {
+                type: PopComponentType.INFERENCE,
+                model: 'eyepop.person:latest',
+                categoryName: 'person',
+                confidenceThreshold: 0.9,
+                forward: {
+                    operator: {
+                        type: ForwardOperatorType.CROP,
+                        crop: {
+                            boxPadding: 0.5
+                        }
+                    },
+                    targets: [{
+                        type: PopComponentType.INFERENCE,
+                        model: 'eyepop.person.pose:latest',
+                        hidden: true,
+                        forward: {
+                            operator: {
+                                type: ForwardOperatorType.CROP,
+                                crop: {
+                                    boxPadding: 0.5,
+                                    orientationTargetAngle: -90.0,
+                                }
+                            },
+                            targets: [{
+                                type: PopComponentType.INFERENCE,
+                                model: 'eyepop.person.3d-body-points.heavy:latest',
+                                categoryName: '3d-body-points',
+                                confidenceThreshold: 0.25
+                            }]
+                        }
+                    }]
+                }
+
+            },
+            // {
+            //     type: PopComponentType.INFERENCE,
+            //     modelUuid: '068080d5b5da79d88000fe5676e26017',
+            //     categoryName: 'ball',
+            //     confidenceThreshold: 0.7,
+            // },
+            {
+                type: PopComponentType.INFERENCE,
+                modelUuid: '068c07263ba57e218000e7655d6b8a3d',
+
+                categoryName: 'paddle_spine',
+                confidenceThreshold: 0.7,
+            },
+        ],
+    }
 };

@@ -14,6 +14,10 @@ class PickleballCheckPaddleProcessor extends Processor {
 
     async setCanvasContext(canvasContext, stream) {
         const api_key = process.env.NEXT_PUBLIC_PADDLE_MODEL_API_KEY;
+        if (!api_key) {
+            console.error("Configuration Error: NEXT_PUBLIC_PADDLE_MODEL_API_KEY is missing in environment variables. Please add it to your .env file.");
+            throw new Error("NEXT_PUBLIC_PADDLE_MODEL_API_KEY is missing. Check console for details.");
+        }
 
         this.endpoint = await EyePop.workerEndpoint({
             // auth: { session: data.session },
@@ -26,7 +30,7 @@ class PickleballCheckPaddleProcessor extends Processor {
         }).connect()
 
         // this.endpoint.changePop(ComposablePops.Paddle);
-        this.endpoint.changePop(ComposablePops.Paddle);
+        await this.endpoint.changePop(ComposablePops.Paddle);
 
         console.log("Pop:", ComposablePops.Paddle);
 
@@ -70,37 +74,37 @@ class PickleballCheckPaddleProcessor extends Processor {
             result.objects = result.objects.filter(obj => obj.confidence > 0.5)
 
             //EXAMPLE RESULT{
-//     "category": "paddle_spine",
-//     "classId": 0,
-//     "classLabel": "paddle spine",
-//     "confidence": 1,
-//     "height": 61.29,
-//     "id": 1,
-//     "keyPoints": [
-//         {
-//             "category": "paddle_spine",
-//             "id": 901,
-//             "points": [
-//                 {
-//                     "id": 2,
-//                     "visible": true,
-//                     "x": 245.314,
-//                     "y": 483.572
-//                 },
-//                 {
-//                     "id": 3,
-//                     "visible": true,
-//                     "x": 245.871,
-//                     "y": 422.281
-//                 }
-//             ]
-//         }
-//     ],
-//     "orientation": 0,
-//     "width": 0.556,
-//     "x": 245.314,
-//     "y": 422.281
-// }
+            //     "category": "paddle_spine",
+            //     "classId": 0,
+            //     "classLabel": "paddle spine",
+            //     "confidence": 1,
+            //     "height": 61.29,
+            //     "id": 1,
+            //     "keyPoints": [
+            //         {
+            //             "category": "paddle_spine",
+            //             "id": 901,
+            //             "points": [
+            //                 {
+            //                     "id": 2,
+            //                     "visible": true,
+            //                     "x": 245.314,
+            //                     "y": 483.572
+            //                 },
+            //                 {
+            //                     "id": 3,
+            //                     "visible": true,
+            //                     "x": 245.871,
+            //                     "y": 422.281
+            //                 }
+            //             ]
+            //         }
+            //     ],
+            //     "orientation": 0,
+            //     "width": 0.556,
+            //     "x": 245.314,
+            //     "y": 422.281
+            // }
             //draw the paddle spline from the 2 keypoints in the result.object/keypoints[0].points
             for (let i = 0; i < result.objects.length; i++) {
                 const paddle = result.objects[i].keyPoints[0].points
@@ -147,8 +151,8 @@ class PickleballCheckPaddleProcessor extends Processor {
             //         }
             //     }
             // }
-            
-                
+
+
 
 
             //this.renderer.draw(result)
@@ -202,15 +206,14 @@ class PickleballCheckPaddleProcessor extends Processor {
 
 
         let currentFrame = null;
-        if (!video || !video?.currentTime || !this.buffer?.length) 
-        {
+        if (!video || !video?.currentTime || !this.buffer?.length) {
             currentFrame = this.lastPrediction
         } else {
             const currentTime = video.currentTime;
             currentFrame = this.getClosestPrediction(currentTime)
         }
 
-        
+
         if (currentFrame) {
             if (canvasContext.canvas.width !== currentFrame.source_width ||
                 canvasContext.canvas.height !== currentFrame.source_height) {
@@ -320,49 +323,49 @@ class PickleballCheckPaddleProcessor extends Processor {
 
     getPaddleAngleFromHand(response) {
         try {
-          const keypoints = response.objects?.[0]?.objects?.[0]?.objects?.[0]?.keyPoints?.[0]?.points;
-      
-          if (!keypoints || keypoints.length === 0) {
-            throw new Error("No keypoints found.");
-          }
-      
-          const wrist = keypoints.find(p => p.classLabel === "wrist");
-          const middleTip = keypoints.find(p => p.classLabel === "middle finger tip");
-      
-          if (!wrist || !middleTip) {
-            throw new Error("Required keypoints not found.");
-          }
-      
-          const dx = middleTip.x - wrist.x;
-          const dy = middleTip.y - wrist.y;
-          const angleRad = Math.atan2(dy, dx);
-          let angleDeg = (angleRad * 180) / Math.PI;
+            const keypoints = response.objects?.[0]?.objects?.[0]?.objects?.[0]?.keyPoints?.[0]?.points;
 
-          const spineLength = Math.sqrt(dx * dx + dy * dy);
-          const rotateDegrees = -125; // simplified rotation angle
-          const rotateRadians = (rotateDegrees * Math.PI) / 180;
-          const cos = Math.cos(rotateRadians);
-          const sin = Math.sin(rotateRadians);
-
-          // Apply rotation to the vector
-          const rotatedDx = 100* (dx * cos - dy * sin) / spineLength;
-          const rotatedDy = 100* (dx * sin + dy * cos) / spineLength;
-
-          return {
-            angle: angleDeg,
-            spine: {
-              from: { x: middleTip.x, y: middleTip.y },
-              to: {
-                x: middleTip.x - rotatedDx,
-                y: middleTip.y - rotatedDy
-              }
+            if (!keypoints || keypoints.length === 0) {
+                throw new Error("No keypoints found.");
             }
-          };
+
+            const wrist = keypoints.find(p => p.classLabel === "wrist");
+            const middleTip = keypoints.find(p => p.classLabel === "middle finger tip");
+
+            if (!wrist || !middleTip) {
+                throw new Error("Required keypoints not found.");
+            }
+
+            const dx = middleTip.x - wrist.x;
+            const dy = middleTip.y - wrist.y;
+            const angleRad = Math.atan2(dy, dx);
+            let angleDeg = (angleRad * 180) / Math.PI;
+
+            const spineLength = Math.sqrt(dx * dx + dy * dy);
+            const rotateDegrees = -125; // simplified rotation angle
+            const rotateRadians = (rotateDegrees * Math.PI) / 180;
+            const cos = Math.cos(rotateRadians);
+            const sin = Math.sin(rotateRadians);
+
+            // Apply rotation to the vector
+            const rotatedDx = 100 * (dx * cos - dy * sin) / spineLength;
+            const rotatedDy = 100 * (dx * sin + dy * cos) / spineLength;
+
+            return {
+                angle: angleDeg,
+                spine: {
+                    from: { x: middleTip.x, y: middleTip.y },
+                    to: {
+                        x: middleTip.x - rotatedDx,
+                        y: middleTip.y - rotatedDy
+                    }
+                }
+            };
         } catch (err) {
-          console.log("Error extracting paddle angle:", err.message);
-          return null;
+            console.log("Error extracting paddle angle:", err.message);
+            return null;
         }
-      }
+    }
 }
 
 export default PickleballCheckPaddleProcessor;

@@ -6,6 +6,7 @@ class Processor {
     results = null
     lastPrediction = null
 
+
     constructor() {
         // Initialize settings or any other properties here
         this.settings = {};
@@ -31,10 +32,11 @@ class Processor {
 
     async setStream(canvasContext, stream) {
         this.stream = stream;
-        const liveIngress = await this.endpoint.liveIngress(stream)
 
+        // SDK 3.6.1 API: Pass the stream directly to process()
+        // The liveIngress() method has been removed and replaced by this direct usage
         this.results = await this.endpoint.process({
-            ingressId: liveIngress.ingressId(),
+            mediaStream: stream
         })
 
         for await (const result of this.results) {

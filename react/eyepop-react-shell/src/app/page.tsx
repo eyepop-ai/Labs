@@ -24,7 +24,7 @@ export const processors = [
     name: "(Upload Img/Vid) Detect Person Pose",
     module: () => import("../processors/person_pose"),
   },
-  
+
   //{
   //    name: "(Edge Runtime - Live) Detect Person Pose",
   //    module: () => import("../processors/person_pose_live"),
@@ -53,6 +53,10 @@ export const processors = [
   {
     name: "(Upload Img/Vid) Detect Paddle",
     module: () => import("../processors/pickleball_check_paddle"),
+  },
+  {
+    name: "(Upload Img/Vid) Pickleball Full",
+    module: () => import("../processors/pickleball_full"),
   },
 
 ];
@@ -93,7 +97,7 @@ export default function CameraPage() {
     fetchDevices()
   }, []) // Runs once after the component mounts
 
-  
+
 
   useEffect(() => {
     startCamera()
@@ -161,7 +165,7 @@ export default function CameraPage() {
     roiCtx.clearRect(0, 0, roiCanvasRef.current.width, roiCanvasRef.current.height)
     roiCtx.strokeStyle = "lightblue"
     roiCtx.lineWidth = 2
-    
+
     roiPointsRef.current.forEach(point => {
       roiCtx.beginPath();
       roiCtx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
@@ -208,7 +212,7 @@ export default function CameraPage() {
     const ctx = ctxRef.current
     if (!ctx) return
 
-    
+
     canvasRef.current.width = window.innerWidth
     canvasRef.current.height = window.innerHeight
 
@@ -330,13 +334,12 @@ export default function CameraPage() {
     ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight)
   }
 
-  const takePhoto = async() => {
+  const takePhoto = async () => {
     if (!canvasRef.current) return
 
     if (!videoRef.current) return
 
-    if(showReset)
-    {
+    if (showReset) {
 
       drawPreviewRef.current = true
       await updateFrame()
@@ -437,6 +440,13 @@ export default function CameraPage() {
           onClick={handleCanvasClick}
         />
 
+        {/* Octopus Logo Overlay */}
+        <img
+          src="/Octopus Logo.png"
+          alt="Octopus Logo"
+          className="absolute top-5 left-5 w-24 h-auto z-10 opacity-80"
+        />
+
         {/* UI Controls */}
         <div className="absolute bottom-5 w-full flex justify-center space-x-8">
 
@@ -531,7 +541,7 @@ export default function CameraPage() {
                   {processor.name}
                 </option>
               ))}
-              
+
             </select>
 
             <button className="mt-4 px-4 py-2 bg-red-500 text-white rounded-md" onClick={() => setShowSettings(false)}>
