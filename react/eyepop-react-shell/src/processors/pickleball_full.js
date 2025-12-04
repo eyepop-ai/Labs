@@ -56,6 +56,7 @@ class PickleballFullProcessor extends Processor {
 
             // Draw the latest prediction from the stream
             this.drawSpines(canvasContext, this.lastPrediction);
+            this.renderer.draw(this.lastPrediction);
             return;
         }
 
@@ -82,6 +83,7 @@ class PickleballFullProcessor extends Processor {
                 return;
 
             this.drawSpines(canvasContext, currentFrame);
+            this.renderer.draw(currentFrame);
             this.lastPrediction = currentFrame;
         }
     }
@@ -110,6 +112,7 @@ class PickleballFullProcessor extends Processor {
             // result.objects = result.objects.filter(obj => obj.confidence > 0.5)
 
             this.drawSpines(canvasContext, result);
+            this.renderer.draw(result);
         }
     }
 
@@ -179,7 +182,7 @@ class PickleballFullProcessor extends Processor {
 
             this.drawSpines(canvasContext, currentFrame);
 
-            //this.renderer.draw(currentFrame)
+            this.renderer.draw(currentFrame)
             this.lastPrediction = currentFrame
         }
     }
@@ -213,79 +216,6 @@ class PickleballFullProcessor extends Processor {
                     canvasContext.fillStyle = 'white';
                     canvasContext.fill();
                     canvasContext.closePath();
-                }
-            }
-
-            // Draw person skeleton with futuristic look
-            if (obj.category === 'person' && obj.keyPoints && obj.keyPoints.length > 0) {
-                const bodyPoints = obj.keyPoints.find(kp => kp.category === '3d-body-points');
-                if (bodyPoints && bodyPoints.points) {
-                    const points = bodyPoints.points;
-
-                    // Create a map for easy lookup by classLabel
-                    const pointMap = {};
-                    points.forEach(p => {
-                        pointMap[p.classLabel] = p;
-                    });
-
-                    // Define skeleton connections
-                    const connections = [
-                        // Head
-                        ['nose', 'left eye (inner)'],
-                        ['nose', 'right eye (inner)'],
-                        ['left eye (inner)', 'left eye'],
-                        ['left eye', 'left eye (outer)'],
-                        ['right eye (inner)', 'right eye'],
-                        ['right eye', 'right eye (outer)'],
-                        ['left eye (outer)', 'left ear'],
-                        ['right eye (outer)', 'right ear'],
-                        ['mouth (left)', 'mouth (right)'],
-
-                        // Torso
-                        ['left shoulder', 'right shoulder'],
-                        ['left shoulder', 'left hip'],
-                        ['right shoulder', 'right hip'],
-                        ['left hip', 'right hip'],
-
-                        // Arms
-                        ['left shoulder', 'left elbow'],
-                        ['left elbow', 'left wrist'],
-                        ['right shoulder', 'right elbow'],
-                        ['right elbow', 'right wrist'],
-
-                        // Legs
-                        ['left hip', 'left knee'],
-                        ['left knee', 'left ankle'],
-                        ['right hip', 'right knee'],
-                        ['right knee', 'right ankle'],
-                    ];
-
-                    // Draw connections with neon glow
-                    canvasContext.save();
-                    canvasContext.shadowBlur = 10; // Reduced blur for thinner lines
-                    canvasContext.shadowColor = '#00FFFF'; // Cyanide Blue glow
-                    canvasContext.strokeStyle = '#00FFFF'; // Cyanide Blue
-                    canvasContext.lineWidth = 1; // Thinner lines
-                    canvasContext.lineCap = 'round';
-                    canvasContext.lineJoin = 'round';
-
-                    connections.forEach(([from, to]) => {
-                        if (pointMap[from] && pointMap[to]) {
-                            canvasContext.beginPath();
-                            canvasContext.moveTo(pointMap[from].x, pointMap[from].y);
-                            canvasContext.lineTo(pointMap[to].x, pointMap[to].y);
-                            canvasContext.stroke();
-                        }
-                    });
-                    canvasContext.restore();
-
-                    // Draw keypoints with different style
-                    points.forEach(point => {
-                        canvasContext.beginPath();
-                        canvasContext.arc(point.x, point.y, 2, 0, 2 * Math.PI); // Reduced radius to 2
-                        canvasContext.fillStyle = '#00FFFF'; // Cyanide Blue
-                        canvasContext.fill();
-                    });
                 }
             }
         }
