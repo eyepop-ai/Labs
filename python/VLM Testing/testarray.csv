@@ -1,0 +1,27 @@
+Tag,Prompt,Model,Positive Folder
+Lockbox,Answer YES or NO only: Do you see the inside of a white box?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,Only answer YES if you can clearly see the lockbox lid fully open. Is it open?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,If the interior cavity is not directly visible answer NO. Is the lockbox open?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,Do not guess. Is the lockbox definitively open based only on visible evidence?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,Is the hinge angle clearly past closed confirming the lockbox is open?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,If any part of the lid blocks the interior answer NO. Is it open?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,Is there an unobstructed view into the inside of the lockbox?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,Only respond YES if the interior foam is directly visible. Is it open?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,Is the lockbox lid visibly separated from the base with a clear air gap?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,If the lockbox could plausibly be closed answer NO. Is it open?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,Is there positive visual confirmation that the lockbox is open?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,If the lid position is ambiguous respond NO. Is it open?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,Is the interior compartment directly exposed to the camera?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,Only answer YES if you can see the inside surfaces of the lockbox.,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,If the lid edge touches the base anywhere answer NO. Is it open?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,Is the lockbox unmistakably open with the interior fully visible?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,If the styrofoam interior is not visible answer NO. Is it open?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,Is the open state confirmed by clear lid rotation away from the base?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,If this could be a closed lockbox from this angle answer NO. Is it open?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,Is the lockbox open beyond any reasonable visual doubt?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,Only respond YES if you can visually trace the entire lid edge away from the box.,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,Is the lockbox interior visible without any occlusion?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,If you cannot see the cavity where items go answer NO. Is it open?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,Is the lid angle wide enough to expose the interior surfaces?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,Is the lockbox positively verified as open by direct interior visibility?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
+Lockbox,Only answer YES if a human observer would confidently say it is open. Is it open?,smol,../Visual Intelligence on Image/rm_lockbox_set3/Training 10k/lockbox_open
