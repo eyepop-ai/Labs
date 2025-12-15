@@ -10,8 +10,9 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@eyepop.ai/eyepop": "^1.18.0",
+    "@eyepop.ai/eyepop": "^3.7.2",
     "@eyepop.ai/eyepop-render-2d": "^1.18.0",
+    "dotenv": "^17.2.3",
     "execa": "^9.6.0",
     "fast-glob": "^3.3.3",
     "fs-extra": "^11.3.1",

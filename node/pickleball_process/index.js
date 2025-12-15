@@ -3,6 +3,7 @@ const { ForwardOperatorType, PopComponentType, EyePop } = require("@eyepop.ai/ey
 const fs = require('fs');
 const path = require('path');
 const { augmentVideoWithBoxes } = require('./draw.js');
+const ffmpeg = require('fluent-ffmpeg');
 
 let endpoint = null;
 let api_key = process.env.EYEPOP_API_KEY;
@@ -11,6 +12,8 @@ async function processVideo(inputFilePath, outputFilePath, popDefinition) {
     //check if inputFilePath+".json" exists    
     const inputJsonPath = inputFilePath + ".json";
     let buffer = [];
+
+    const startProcess = Date.now();
 
     if (fs.existsSync(inputJsonPath)) {
         console.log("Using cached data from:", inputJsonPath);
@@ -54,13 +57,14 @@ async function processVideo(inputFilePath, outputFilePath, popDefinition) {
         fs.writeFileSync(inputJsonPath, JSON.stringify(buffer, null, 2));
     }
 
+    console.log(`Processing took ${(Date.now() - startProcess) / 1000} seconds`);
+
     // take the output buffer and frame be frame augment the video
     await augmentVideoWithBoxes(inputFilePath, outputFilePath, buffer);
 }
 
 pop_definition = {
     components: [
-        // Test with standard models first - comment out custom pickleball models for now
         {
             type: PopComponentType.INFERENCE,
             model: 'eyepop.person:latest',
@@ -112,6 +116,16 @@ pop_definition = {
     ],
 }
 
+const getVideoLength = async (filePath) => {
+    return new Promise((resolve, reject) => {
+    ffmpeg.ffprobe(filePath, (err, metadata) => {
+        if (err) return reject(err);
+        const duration = metadata.format.duration;
+        resolve(duration);
+    });
+    });
+};
+
 console.log("Pop definition created:", pop_definition);
 
 // grab the list of mp4 files from ./input_video
@@ -134,6 +148,8 @@ console.log("Found video files:", files);
         const outputFilePath = path.join(outputDir, baseName + '_output.mp4');
 
         console.log(`Processing file: ${inputFilePath}`);
+        const videoLengthInSeconds = await getVideoLength(inputFilePath);
+        console.log(`Video Length (in secs):`, videoLengthInSeconds);
 
         await processVideo(inputFilePath, outputFilePath, pop_definition);
 

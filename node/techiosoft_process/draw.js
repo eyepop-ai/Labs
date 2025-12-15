@@ -5,7 +5,7 @@ const path = require('path');
 const fg = require('fast-glob');
 const sharp = require('sharp');
 
-const traceColors = [
+const trackColors = [
   '#FF0000', '#FF4000', '#FF8000', '#FFBF00', '#FFFF00',
   '#BFFF00', '#80FF00', '#40FF00', '#00FF00', '#00FF40',
   '#00FF80', '#00FFBF', '#00FFFF', '#00BFFF', '#0080FF',
@@ -93,48 +93,48 @@ function makeSVGOverlay(width, height, graphics) {
             const ry = Math.max(0, g.y);
             const rw = Math.max(0, g.w);
             const rh = Math.max(0, g.h);
-            const mainLabel = g.classLabel || g.category || '';
-            const traceLabel = g.traceId !== undefined ? String(g.traceId) : null;
+            const mainLabel = g.label || '';
+            const trackLabel = g.trackId !== undefined ? String(g.trackId) : null;
             const labelText = mainLabel ? `${mainLabel}${Number.isFinite(g.score) ? ` (${(g.score * 100).toFixed(1)}%)` : ''}` : null;
             const pad = 4;
             const labelWidth = Math.max(
               labelText ? labelText.length * 7 : 0,
-              traceLabel ? traceLabel.length * 7 : 0,
+              trackLabel ? trackLabel.length * 7 : 0,
               40
             );
-            const rectHeight = traceLabel ? 18 + 24 + 4 : 18; // 18 for main label + 24 for traceId + 4 padding between
+            const rectHeight = trackLabel ? 18 + 24 + 4 : 18; // 18 for main label + 24 for trackId + 4 padding between
 
             // Compute y positions for text elements
-            let labelY, traceY;
-            if (labelText && traceLabel) {
+            let labelY, trackY;
+            if (labelText && trackLabel) {
               labelY = ry - rectHeight + 14;
-              traceY = labelY + 18;
+              trackY = labelY + 18;
             } else if (labelText) {
               labelY = ry - rectHeight + 14;
-              traceY = null;
-            } else if (traceLabel) {
-              // Center traceLabel vertically in rectHeight
-              traceY = ry - rectHeight + (rectHeight / 2) + 8; // 8 is approx half font size
+              trackY = null;
+            } else if (trackLabel) {
+              // Center trackLabel vertically in rectHeight
+              trackY = ry - rectHeight + (rectHeight / 2) + 8; // 8 is approx half font size
               labelY = null;
             } else {
               labelY = null;
-              traceY = null;
+              trackY = null;
             }
 
             return `
               <g id="${id}">
                 <rect x="${rx}" y="${ry}" width="${rw}" height="${rh}"
                   fill="none" stroke="${safe(color)}" stroke-width="3"/>
-                ${(labelText || traceLabel) ? `
+                ${(labelText || trackLabel) ? `
                   <rect x="${rx}" y="${ry - rectHeight < 0 ? ry : ry - rectHeight}" width="${labelWidth + pad * 2}" height="${rectHeight}"
                     fill="${safe(color)}" fill-opacity="0.75"/>
                   ${labelText ? `
                     <text x="${rx + 6}" y="${labelY}"
                       font-family="sans-serif" font-size="12" fill="#000">${safe(labelText)}</text>
                   ` : ''}
-                  ${traceLabel ? `
-                    <text x="${rx + 6}" y="${traceY}"
-                      font-family="sans-serif" font-size="24" fill="#000">${safe(traceLabel)}</text>
+                  ${trackLabel ? `
+                    <text x="${rx + 6}" y="${trackY}"
+                      font-family="sans-serif" font-size="24" fill="#000">${safe(trackLabel)}</text>
                   ` : ''}
                 ` : ''}
               </g>
@@ -173,7 +173,7 @@ function objectsToBoxes(row) {
                 label: o.classLabel || o.category || '',
                 score: o.confidence,
                 color: colorByCategory[(o.classLabel || '').toLowerCase()] || fallbackColor || '#00ff00',
-                traceId: (o.traceId !== undefined && o.traceId !== null) ? o.traceId : null
+                trackId: (o.trackId !== undefined && o.trackId !== null) ? o.trackId : null
             });
         }
     };
@@ -256,7 +256,7 @@ function objectsToBoxes(row) {
     return out;
 }
 
-const traceHistory = new Map();
+const trackHistory = new Map();
 
 async function augmentVideoWithBoxes(inputFilePath, outputFilePath, buffer) {
     const inputVideo = inputFilePath
@@ -316,17 +316,17 @@ async function augmentVideoWithBoxes(inputFilePath, outputFilePath, buffer) {
         const img = sharp(file);
         const overlayBoxes = frameMap.get(frameIdx - 1) || []; // assume JSON 0-based
 
-        // Update traceHistory with current frame's overlayBoxes
+        // Update trackHistory with current frame's overlayBoxes
         for (const box of overlayBoxes) {
-            if (box.traceId !== null && box.traceId !== undefined) {
-                const traceId = box.traceId;
+            if (box.trackId !== null && box.trackId !== undefined) {
+                const trackId = box.trackId;
                 const cx = box.x + (box.w ? box.w / 2 : 0);
                 const cy = box.y + (box.h ? box.h / 2 : 0);
                 const color = box.color || '#00ff00';
-                if (!traceHistory.has(traceId)) {
-                    traceHistory.set(traceId, []);
+                if (!trackHistory.has(trackId)) {
+                    trackHistory.set(trackId, []);
                 }
-                const history = traceHistory.get(traceId);
+                const history = trackHistory.get(trackId);
                 history.push({ x: cx, y: cy, color });
                 if (history.length > 50) {
                     history.shift();
@@ -334,8 +334,8 @@ async function augmentVideoWithBoxes(inputFilePath, outputFilePath, buffer) {
             }
         }
 
-        // Generate line objects from traceHistory and add to overlayBoxes
-        for (const [traceId, points] of traceHistory.entries()) {
+        // Generate line objects from trackHistory and add to overlayBoxes
+        for (const [trackId, points] of trackHistory.entries()) {
             if (points.length >= 2) {
                 for (let j = 1; j < points.length; j++) {
                     const p1 = points[j - 1];
@@ -346,7 +346,7 @@ async function augmentVideoWithBoxes(inputFilePath, outputFilePath, buffer) {
                         y1: p1.y,
                         x2: p2.x,
                         y2: p2.y,
-                        color: traceColors[traceId % traceColors.length],
+                        color: trackColors[trackId % trackColors.length],
                         label: null,
                         score: null
                     });

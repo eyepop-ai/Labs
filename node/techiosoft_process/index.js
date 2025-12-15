@@ -3,9 +3,13 @@ const { ForwardOperatorType, PopComponentType, EyePop } = require("@eyepop.ai/ey
 const fs = require('fs');
 const path = require('path');
 const { augmentVideoWithBoxes } = require('./draw.js');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+
 
 let endpoint = null;
 let api_key = process.env.EYEPOP_API_KEY;
+
+console.log("API Key:", api_key);
 
 async function processVideo(inputFilePath, outputFilePath, popDefinition) {
     //check if inputFilePath+".json" exists    
@@ -59,64 +63,43 @@ async function processVideo(inputFilePath, outputFilePath, popDefinition) {
 }
 
 pop_definition = {
-    components: [
-        // Test with standard models first - comment out custom pickleball models for now
-        // {
-        //     type: PopComponentType.INFERENCE,
-        //     model: 'eyepop.person:latest',
-        //     categoryName: 'person',
-        //     forward: {
-        //         operator: {
-        //             type: ForwardOperatorType.CROP,
-        //             crop: {
-        //                 boxPadding: 0.25,
-        //                 maxItems: 128,
-        //             }
-        //         },
-        //         targets: [{
-        //             type: PopComponentType.INFERENCE,
-        //             model: 'eyepop.person.palm:latest',
-        //             forward: {
-        //                 operator: {
-        //                     type: ForwardOperatorType.CROP,
-        //                     crop: {
-        //                         includeClasses: ['hand circumference'],
-        //                         orientationTargetAngle: -90.0,
-        //                     }
-        //                 },
-        //                 targets: [{
-        //                     type: PopComponentType.INFERENCE,
-        //                     model: 'eyepop.person.3d-hand-points:latest',
-        //                     categoryName: '3d-hand-points'
-        //                 }]
-        //             }
-        //         }]
-        //     }
-        // },
-        {
-            type: PopComponentType.INFERENCE,
-            //Bobby model
-            modelUuid: '068c064ed1877074800061f101857215',
-
-            //No cash
-            // modelUuid: '068d48f996a97db78000ea4ca825c22a',
-
-            //Cash more epochs
-            // modelUuid: '068d48df48e87f4f80004e10ffc47aea',
-            categoryName: 'cash_drawer',
-            confidenceThreshold: 0.7,
-            forward: {
-                "targets": [
-                {
-                    "type": "tracing"
-                }
-                ],
-                "operator": {
-                    "type": "crop"
-                }
-            },
-        },
-    ],
+  "components": [
+    {
+      "type": "inference",
+      "model": "eyepop.person:latest",
+      "forward": {
+        "targets": [
+          {
+            "type": "tracing",
+            "reidModel": "eyepop.person.reid:latest"
+          }
+        ],
+        "operator": {
+          "type": "crop"
+        }
+      },
+      "categoryName": "person",
+      "confidenceThreshold": 0.8
+    },
+    {
+      "type": "inference",
+      "model": "eyepop.vehicle:latest",
+      "forward": {
+        "targets": [
+          {
+            "type": "tracking",
+            "maxAgeSeconds": 5.0,
+            "iouThreshold": 0.2,
+          }
+        ],
+        "operator": {
+          "type": "crop"
+        }
+      },
+      "categoryName": "common-objects",
+      "confidenceThreshold": 0.8
+    }
+  ]
 }
 
 console.log("Pop definition created:", pop_definition);
