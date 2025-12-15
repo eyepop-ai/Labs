@@ -7,7 +7,7 @@ import os
 from PIL import Image
 
 
-def resize_image(image_path, max_size=(400, 400)):
+def resize_image(image_path, max_size=(512, 512)):
     # if image path contains "_resized" already, skip resizing
     if "_resized" in image_path:
         print(f"Image {image_path} already resized, skipping resize.")
