@@ -31,7 +31,6 @@ def resize_image(image_path, max_size=(400, 400)):
     img.thumbnail(max_size, Image.LANCZOS)
     img.save(resized_image_path)
     
-   
     return resized_image_path
 
 
@@ -89,7 +88,7 @@ def infer_image_description_with_file(
 
 
 def infer_image_description(
-    image_url, text_prompt, token, worker_release="qwen3", max_new_tokens=500
+    image_url, text_prompt, token, worker_release="qwen3-instruct", max_new_tokens=500
 ):
     url = "https://vlm.staging.eyepop.xyz/api/v1/infer"
 
