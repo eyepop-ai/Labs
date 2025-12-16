@@ -4,6 +4,7 @@ import csv
 import requests
 import os
 from dotenv import load_dotenv
+from datetime import datetime
 
 
 load_dotenv()
@@ -26,7 +27,7 @@ else:
 
 token = "Bearer " + response.json().get("access_token", "")
 
-with open('testarray.csv', newline='') as csvfile:
+with open('./results/testarray.csv', newline='') as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
         print(row)
@@ -41,6 +42,8 @@ with open('testarray.csv', newline='') as csvfile:
         if(run=='x'):
             continue
     
+        timestamp = datetime.now().strftime("%y%m%d_%H%M")
+        results_csv = f'./results/testarray_results_{timestamp}.csv'
         generictester.TestPrompt(
             tag,
             text_prompt,
@@ -48,6 +51,7 @@ with open('testarray.csv', newline='') as csvfile:
             token,
             worker_release=worker_release,
             sample_size=samples,
-            expected_result=expected_result
+            expected_result=expected_result,
+            results_csv=results_csv
         )
         # break
