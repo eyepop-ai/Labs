@@ -52,6 +52,7 @@ with open('./results/testarray.csv', newline='') as csvfile:
             worker_release=worker_release,
             sample_size=samples,
             expected_result=expected_result,
-            results_csv=results_csv
+            results_csv=results_csv,
+            should_copy_files_to_predicted_folders=False
         )
         # break

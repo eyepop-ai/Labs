@@ -1,5 +1,6 @@
 # flake8: noqa
 import datetime
+import shutil
 import utils
 import os
 from PIL import Image
@@ -9,10 +10,9 @@ import hashlib
 import time
 
 
-def process_images_in_folder(image_files, text_prompt, token, worker_release, hashOfPrompt, expected_result):
+def process_images_in_folder(image_files, text_prompt, token, worker_release, hashOfPrompt, expected_result, should_copy_files_to_predicted_folders):
     correct_answers = 0
-    wrong_answers = 0
-   
+    wrong_answers = 0   
 
     for image_path in image_files:
         start_time = time.time()
@@ -58,19 +58,37 @@ def process_images_in_folder(image_files, text_prompt, token, worker_release, ha
                 print("Could not resize image, skipping...")        
                 continue
 
-            result = utils.infer_image_description_with_file(
-                resized_image_path, text_prompt, token, worker_release=worker_release, max_new_tokens=50
-            )
+            try:
+                result = utils.infer_image_description_with_file(
+                    resized_image_path, text_prompt, token, worker_release=worker_release, max_new_tokens=50
+                )
+            except Exception as e:
+                print("Inference error:", e)
+                wrong_answers += 1
+                continue
         else:
             with open(resized_json_path, "r") as f:
                 result = json.load(f)
             print("Loaded result from cache.")
             print("--------------------")
 
-        print("Raw Output:")
-        print(result.get("raw_output", ""))
+        if not isinstance(result, dict):
+            print("Invalid result type, skipping image.")
+            wrong_answers += 1
+            continue
+
+        print("Result Output: <-->")
+        print(result)
+        print("</-->")
 
         raw_output = result.get("raw_output", "")
+        if not raw_output:
+            print("Empty raw_output, skipping image.")
+            wrong_answers += 1
+            continue
+
+       
+
         # Extract JSON object from raw_output
         match = re.search(r'({[\s\S]*})', raw_output)
         if match:
@@ -81,7 +99,6 @@ def process_images_in_folder(image_files, text_prompt, token, worker_release, ha
                 print(json.dumps(parsed, indent=4))
             except Exception as e:
                 print("Could not parse JSON from raw_output:", e)
-                print(json_str)
         else:
             print("No JSON object found in raw_output.")
 
@@ -110,8 +127,19 @@ def process_images_in_folder(image_files, text_prompt, token, worker_release, ha
             wrong_answers += 1  # count unexpected as NO for safety
             with open(os.path.join(cache_dir, f"wrong_log.{worker_release}.{hashOfPrompt}.txt"), "a") as log_file:
                 log_file.write(f"{image_filename}\n")
+
+        if(should_copy_files_to_predicted_folders):
+            # Create predicted folder if it doesn't exist
+            predicted_folder = "./results/images_predicted/"+hashOfPrompt+"/"+answer
+            os.makedirs(predicted_folder, exist_ok=True)
+            # Copy image to predicted folder
+            destination_path = os.path.join(predicted_folder, image_filename)
+            if not os.path.exists(destination_path):
+                shutil.copy2(image_path, destination_path)
         
-        print(f"Percentage: {correct_answers / (correct_answers + wrong_answers) * 100.0}%, progress: {correct_answers + wrong_answers} / {len(image_files)}")
+        total = correct_answers + wrong_answers
+        pct = (correct_answers / total * 100.0) if total > 0 else 0.0
+        print(f"Percentage: {pct}%, progress: {total} / {len(image_files)}")
         print("--------------------")
 
         
@@ -136,19 +164,19 @@ def get_image_files(image_folder_path, sample_size):
         return image_files[:sample_size]
 
 
-def log_results_to_csv(tag, text_prompt, worker_release, correct_answers, wrong_answers, expected_result, results_csv):
+def log_results_to_csv(tag, text_prompt, worker_release, correct_answers, wrong_answers, expected_result, results_csv, hashOfPrompt):
     # Append log final percentage and prompt to csv with header: tag, prompt, model, yes_percentage, sample_size
     # If the csv does not exist, create it with header
     if not os.path.exists(results_csv):
         with open(results_csv, "w") as f:
-            f.write('"Tag","Prompt","Model","Score","expected result","samples"\n')
+            f.write('"Tag","Prompt","Model","Score","expected result","samples","hash"\n')
             f.flush()
 
     # Ensure all fields are double quoted
     score = correct_answers / (correct_answers + wrong_answers) * 100.0 if (correct_answers + wrong_answers) > 0 else 0.0
     with open(results_csv, "a") as f:
         escaped_prompt = text_prompt.replace('\n', ' ').replace('"', '""')
-        f.write(f'"{tag}","{escaped_prompt}","{worker_release}","{score}","{expected_result}","{correct_answers + wrong_answers}"\n')
+        f.write(f'"{tag}","{escaped_prompt}","{worker_release}","{score}","{expected_result}","{correct_answers + wrong_answers}","{hashOfPrompt}"\n')
         f.flush()
 
 
@@ -160,7 +188,8 @@ def TestPrompt(
     worker_release="smol",
     sample_size=50,
     results_csv="test_results.csv",
-    expected_result="YES"
+    expected_result="YES",
+    should_copy_files_to_predicted_folders=False
 ):
     hash_input = (text_prompt + worker_release).encode('utf-8')
     hashOfPrompt = hashlib.sha256(hash_input).hexdigest()
@@ -187,7 +216,7 @@ def TestPrompt(
 
     # PROCESS IMAGES IN FOLDER
     correct_answers, wrong_answers = process_images_in_folder(
-        image_files, text_prompt, token, worker_release, hashOfPrompt, expected_result
+        image_files, text_prompt, token, worker_release, hashOfPrompt, expected_result, should_copy_files_to_predicted_folders=should_copy_files_to_predicted_folders
     )
 
     # PROCESS FOLDERS IN FOLDER
@@ -205,7 +234,7 @@ def TestPrompt(
             # If expected_result is "<folder>", use the current folder name as expected_result
             folder_expected_result = folder_name.strip().lower() if expected_result == "<folder>" else expected_result
             folder_correct_answers, folder_wrong_answers = process_images_in_folder(
-                folder_image_files, text_prompt, token, worker_release, hashOfPrompt, folder_expected_result
+                folder_image_files, text_prompt, token, worker_release, hashOfPrompt, folder_expected_result, should_copy_files_to_predicted_folders=should_copy_files_to_predicted_folders
             )
 
             correct_answers += folder_correct_answers
@@ -231,5 +260,7 @@ def TestPrompt(
         correct_answers,
         wrong_answers,
         expected_result,
-        results_csv
+        results_csv,
+        f"{worker_release}.{hashOfPrompt}"
     )
+    print(f"{worker_release}.{hashOfPrompt}")
