@@ -8,6 +8,7 @@ import json
 import re
 import hashlib
 import time
+import requests
 
 
 def process_images_in_folder(image_files, text_prompt, token, worker_release, hashOfPrompt, expected_result, should_copy_files_to_predicted_folders):
@@ -264,3 +265,65 @@ def TestPrompt(
         f"{worker_release}.{hashOfPrompt}"
     )
     print(f"{worker_release}.{hashOfPrompt}")
+
+def TestPromptAgainstVideoAsset(tag,
+    text_prompt,
+    asset_uuid,
+    token,
+    worker_release="smol",    
+    results_csv="test_results.csv",
+    expected_result="YES",
+    should_copy_files_to_predicted_folders=False,
+    start_seconds=0,
+    end_seconds=1,
+    fps=1.0
+):
+
+    # get length of video
+    # video_length_secs = utils.get_video_length_secs(assetUuid, token)
+    video_length_secs = 15*60
+    print(f"Video length: {video_length_secs} seconds")
+
+    # event_length_secs = 2
+    # overlap = .5
+    # step = int(event_length_secs * overlap)
+    # print(f"Using step size: {step} seconds")
+
+    # # Create a list of timestamps to sample from the video
+    
+    # timestamps = [i for i in range(0, video_length_secs, step)]
+    # print(f"Sampling timestamps: {timestamps}")
+
+    # timestamps = timestamps[:1]
+    # timestamps = [12]
+
+    # for timestamp in timestamps:
+
+
+    print(f"Processing timestamp: {start_seconds} to {end_seconds} at {fps} fps")
+    # Extract frame at timestamp
+    video_url = "ai.eyepop://data/assets/"+asset_uuid+"?transcode_mode=video_original_size&start_timestamp="+str(start_seconds*1000000000)+"&end_timestamp="+str((end_seconds)*1000000000)
+    print(f"Video URL: {video_url}")
+    result = utils.infer_video_description(
+        video_url, text_prompt, token, worker_release=worker_release, max_new_tokens=50, image_size=512, fps=fps
+    )
+
+    # print("Result Output: <-->")
+    # print(result)
+    # print("</-->")
+
+    raw_output = result.get("raw_output", "")
+    if not raw_output:
+        print("Empty raw_output, skipping image.")
+        return    
+
+    # print("Full Result Dict:")
+    # print(json.dumps(result, indent=2, default=str))
+
+    # trim whitespace and punctuation from raw_output
+    answer = raw_output.strip().strip(".").lower()
+    print(f"--------\nFinal Answer: {answer} vs Expected: {expected_result}--------\n")
+
+    # with open(resized_json_path, "w") as f:
+    #     json.dump(result, f, indent=2, default=str)        
+

@@ -122,6 +122,76 @@ def infer_image_description(
     return response.json()
 
 
+def infer_video_description(
+    video_url, text_prompt, token, worker_release="qwen3-instruct", max_new_tokens=500, image_size=512, fps=1.0
+):
+    url = "https://vlm.staging.eyepop.xyz/api/v1/infer"
+
+    headers = {
+        "accept": "application/json",
+        "Authorization": token
+    }
+
+    infer_request = {
+        "worker_release": worker_release,
+        "url": video_url,
+        "text_prompt": text_prompt,
+        "config": {
+            "max_new_tokens": max_new_tokens,
+            "image_size": image_size,
+            "fps": fps
+        },
+        "refresh": False,
+    }
+
+    data = {
+        "infer_request": json.dumps(infer_request)
+    }
+
+    # print("Sending inference request...")
+    # print (infer_request)
+
+    start_time = time.time()
+    response = requests.post(
+        url,
+        headers=headers,
+        data=data,
+        # verify=False
+    )
+    elapsed_time = time.time() - start_time
+    print(f"Inference request took {elapsed_time:.2f} seconds.")
+
+    return response.json()
+
+
+
+def download_video_asset(
+    asset_uuid,
+    token,
+    start_timestamp,
+    end_timestamp,
+    output_path,
+    transcode_mode="video_original_size",
+    api_base="https://dataset-api.staging.eyepop.xyz"
+):
+    url = (
+        f"{api_base}/assets/{asset_uuid}/download"
+        f"?transcode_mode={transcode_mode}"
+        f"&start_timestamp={start_timestamp}"
+        f"&end_timestamp={end_timestamp}"
+    )
+    headers = {
+        "accept": "application/json",
+        "Authorization": f"Bearer {token}"
+    }
+    response = requests.get(url, headers=headers, stream=True)
+    response.raise_for_status()
+    with open(output_path, "wb") as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            if chunk:
+                f.write(chunk)
+    print(f"Downloaded video to {output_path}")
+
 categories = {
     "Exterior": {
         "conditions": [
