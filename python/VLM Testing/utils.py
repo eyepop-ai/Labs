@@ -47,7 +47,7 @@ def download_youtube_video(yt_url):
 
 
 def infer_image_description_with_file(
-    image_filepath, text_prompt, token, worker_release="qwen3", max_new_tokens=500
+    image_filepath, text_prompt, token, worker_release="qwen3", max_new_tokens=500, image_size=512
 ):
     url = "https://vlm.staging.eyepop.xyz/api/v1/infer"
 
@@ -60,7 +60,10 @@ def infer_image_description_with_file(
     infer_request = {
         "worker_release": worker_release,
         "text_prompt": text_prompt,
-        "config": {"max_new_tokens": max_new_tokens},
+        "config": {
+            "max_new_tokens": max_new_tokens,
+            "image_size": image_size,
+        },
         "refresh": False,
     }
 
@@ -88,7 +91,7 @@ def infer_image_description_with_file(
 
 
 def infer_image_description(
-    image_url, text_prompt, token, worker_release="qwen3-instruct", max_new_tokens=500
+    image_url, text_prompt, token, worker_release="qwen3-instruct", max_new_tokens=500, image_size=512
 ):
     url = "https://vlm.staging.eyepop.xyz/api/v1/infer"
 
@@ -101,7 +104,10 @@ def infer_image_description(
         "worker_release": worker_release,
         "url": image_url,
         "text_prompt": text_prompt,
-        "config": {"max_new_tokens": max_new_tokens},
+        "config": {
+            "max_new_tokens": max_new_tokens,
+            "image_size": image_size
+        },
         "refresh": False,
     }
 

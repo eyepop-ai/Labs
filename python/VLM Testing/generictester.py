@@ -11,13 +11,43 @@ import time
 import requests
 
 
+# Document mode
+# max_new_tokens = 500
+# image_size = 1024
+
+# regular mode
+max_new_tokens = 5
+image_size = 512
+
+
+def save_and_parse_json_raw_output(raw_output, image_filename, worker_release, hashOfPrompt):
+    is_raw_output_json = False
+    json_raw_output = raw_output.strip()
+
+    if json_raw_output.startswith("```json"):
+        is_raw_output_json = True
+        
+        # Remove the markdown code block markers
+        json_raw_output = re.sub(r"^```json\s*", "", json_raw_output)
+        json_raw_output = re.sub(r"\s*```$", "", json_raw_output)
+        
+        # Save to file
+        mkdir_path = f"./results/images_predicted/{hashOfPrompt}"
+        os.makedirs(mkdir_path, exist_ok=True)
+        json_path = f"./results/images_predicted/{hashOfPrompt}/{image_filename}.{worker_release}.{hashOfPrompt}.json"
+        with open(json_path, "w") as f:
+            f.write(json_raw_output)
+    
+    return is_raw_output_json
+
+
 def process_images_in_folder(image_files, text_prompt, token, worker_release, hashOfPrompt, expected_result, should_copy_files_to_predicted_folders):
     correct_answers = 0
     wrong_answers = 0   
 
     for image_path in image_files:
         start_time = time.time()
-        print(f"Processing: {image_path}")
+        print(f"\n-------------\nProcessing: {image_path}")
         
         # Dynamically populate categories from utils.categories
         categories = {}
@@ -29,46 +59,46 @@ def process_images_in_folder(image_files, text_prompt, token, worker_release, ha
         cache_dir = os.path.join(os.path.dirname(image_path), ".vlmcache")
         os.makedirs(cache_dir, exist_ok=True)
         image_filename = os.path.basename(image_path)
-        resized_json_path = os.path.join(
+        json_path = os.path.join(
             cache_dir,
             f"{image_filename}.{worker_release}.{hashOfPrompt}.json"
         )
 
-        print(f"Resized JSON Path: {resized_json_path}")
-
-        if(os.path.exists(resized_json_path)):
+        # CHECK FOR CACHED RESULT (JSON)
+        print(f"JSON Cache Path: {json_path}")
+        if(os.path.exists(json_path)):
             print("Found cached result, loading...")
-            with open(resized_json_path, "r") as f:
+            with open(json_path, "r") as f:
                 result = json.load(f)
             print("Loaded result from cache.")
             print("--------------------")
             if ( isinstance(result, dict) and (
-                result.get("detail") == "Token expired" or
-                (isinstance(result.get("detail"), str) and result.get("detail").startswith("Internal server error"))
+                (isinstance(result.get("detail"), str) and result.get("detail") == "Token expired") or
+                (isinstance(result.get("detail"), str) and result.get("detail").startswith("Internal server error")) or
+                (isinstance(result.get("detail"), str) and result.get("detail").startswith("Missing or invalid authentication"))
             )):
                 #  delete the cached file
-                os.remove(resized_json_path)
+                os.remove(json_path)
                 print("Deleted cached file due to token expiration.")
 
-        if not os.path.exists(resized_json_path):
-            print("Resizing image...")    
-            resized_image_path = utils.resize_image(image_path)
-            print("--------------------")
-
-            if(resized_image_path is None):
-                print("Could not resize image, skipping...")        
+        # IF NO CACHED RESULT, RUN INFERENCE
+        if not os.path.exists(json_path):
+            if(image_path is None):
+                print("empty image path, skipping...")
                 continue
 
             try:
+                
+                print("MAX NEW TOKENS:", max_new_tokens)
                 result = utils.infer_image_description_with_file(
-                    resized_image_path, text_prompt, token, worker_release=worker_release, max_new_tokens=50
+                    image_path, text_prompt, token, worker_release=worker_release, max_new_tokens=max_new_tokens, image_size=image_size
                 )
             except Exception as e:
                 print("Inference error:", e)
                 wrong_answers += 1
                 continue
         else:
-            with open(resized_json_path, "r") as f:
+            with open(json_path, "r") as f:
                 result = json.load(f)
             print("Loaded result from cache.")
             print("--------------------")
@@ -78,9 +108,9 @@ def process_images_in_folder(image_files, text_prompt, token, worker_release, ha
             wrong_answers += 1
             continue
 
-        print("Result Output: <-->")
-        print(result)
-        print("</-->")
+        # print("Result Output: <-->")
+        # print(result)
+        # print("</-->")
 
         raw_output = result.get("raw_output", "")
         if not raw_output:
@@ -88,7 +118,7 @@ def process_images_in_folder(image_files, text_prompt, token, worker_release, ha
             wrong_answers += 1
             continue
 
-       
+        save_and_parse_json_raw_output(raw_output, image_filename, worker_release, hashOfPrompt)
 
         # Extract JSON object from raw_output
         match = re.search(r'({[\s\S]*})', raw_output)
@@ -110,13 +140,17 @@ def process_images_in_folder(image_files, text_prompt, token, worker_release, ha
         if not (
             isinstance(result, dict) and (
                 result.get("detail") == "Token expired" or
-                (isinstance(result.get("detail"), str) and result.get("detail").startswith("Internal server error"))
+                (isinstance(result.get("detail"), str) and result.get("detail").startswith("Internal server error")) or
+                (isinstance(result.get("detail"), str) and result.get("detail").startswith("Missing or invalid authentication"))
             )
         ):
-            with open(resized_json_path, "w") as f:
-                json.dump(result, f, indent=2, default=str)        
+            with open(json_path, "w") as f:
+                json.dump(result, f, indent=2, default=str)
+
+            
         else:
             print("Token expired or internal server error detected, not saving to cache.")
+            quit()
         
         # trim whitespace and punctuation from raw_output
         answer = raw_output.strip().strip(".").lower()
@@ -165,19 +199,19 @@ def get_image_files(image_folder_path, sample_size):
         return image_files[:sample_size]
 
 
-def log_results_to_csv(tag, text_prompt, worker_release, correct_answers, wrong_answers, expected_result, results_csv, hashOfPrompt):
+def log_results_to_csv(tag, text_prompt, worker_release, correct_answers, wrong_answers, expected_result, results_csv, hashOfPrompt, total_time):
     # Append log final percentage and prompt to csv with header: tag, prompt, model, yes_percentage, sample_size
     # If the csv does not exist, create it with header
     if not os.path.exists(results_csv):
         with open(results_csv, "w") as f:
-            f.write('"Tag","Prompt","Model","Score","expected result","samples","hash"\n')
+            f.write('"Tag","Prompt","Model","Score","expected result","samples","hash","Total Time","Time per sample"\n')
             f.flush()
 
     # Ensure all fields are double quoted
     score = correct_answers / (correct_answers + wrong_answers) * 100.0 if (correct_answers + wrong_answers) > 0 else 0.0
     with open(results_csv, "a") as f:
         escaped_prompt = text_prompt.replace('\n', ' ').replace('"', '""')
-        f.write(f'"{tag}","{escaped_prompt}","{worker_release}","{score}","{expected_result}","{correct_answers + wrong_answers}","{hashOfPrompt}"\n')
+        f.write(f'"{tag}","{escaped_prompt}","{worker_release}","{score}","{expected_result}","{correct_answers + wrong_answers}","{hashOfPrompt}","{total_time}","{total_time / (correct_answers + wrong_answers) if (correct_answers + wrong_answers) > 0 else 0.0}"\n')
         f.flush()
 
 
@@ -220,6 +254,9 @@ def TestPrompt(
         image_files, text_prompt, token, worker_release, hashOfPrompt, expected_result, should_copy_files_to_predicted_folders=should_copy_files_to_predicted_folders
     )
 
+
+    total_time_secs = 0  
+
     # PROCESS FOLDERS IN FOLDER
     for folder_name in os.listdir(positive_image_folder_path):
         folder_path = os.path.join(positive_image_folder_path, folder_name)
@@ -229,6 +266,7 @@ def TestPrompt(
 
         if os.path.isdir(folder_path):
             print(f"Processing folder: {folder_name}")
+            folder_start_time = time.time()
             folder_image_files = get_image_files(folder_path, sample_size)
 
             # Process images in the folder
@@ -254,6 +292,8 @@ def TestPrompt(
                 f.write(f'"{tag}","{text_prompt.replace(chr(10), " ")}","{worker_release}",{folder_correct_answers / (folder_correct_answers + folder_wrong_answers) * 100.0},{folder_expected_result},{folder_correct_answers + folder_wrong_answers},"{folder_name}"\n')
                 f.flush()
 
+            total_time_secs += time.time() - folder_start_time
+
     log_results_to_csv(
         tag,
         text_prompt,
@@ -262,7 +302,8 @@ def TestPrompt(
         wrong_answers,
         expected_result,
         results_csv,
-        f"{worker_release}.{hashOfPrompt}"
+        f"{worker_release}.{hashOfPrompt}",
+        total_time_secs
     )
     print(f"{worker_release}.{hashOfPrompt}")
 

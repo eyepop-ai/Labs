@@ -24,6 +24,7 @@ if response.ok:
     print("Token response:", response.json())
 else:
     print("Failed to get token:", response.status_code, response.text)
+    quit()
 
 token = "Bearer " + response.json().get("access_token", "")
 
