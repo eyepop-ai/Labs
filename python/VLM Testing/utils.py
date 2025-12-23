@@ -94,11 +94,22 @@ def infer_image_description_with_file(
         }
 
         start_time = time.time()
+        # Print equivalent curl command for debugging
+        curl_cmd = (
+            f"curl -X POST '{url}' "
+            f"-H 'accept: application/json' "
+            f"-H 'Authorization: {headers['Authorization']}' "
+            f"-F 'file=@{image_filepath};type=application/octet-stream' "
+            f"-F 'infer_request={json.dumps(infer_request)}'"
+        )
+        # print("Equivalent curl command:\n", curl_cmd, "\n")
+
         response = requests.post(
             url,
             headers=headers,
             data=data,
             files=files,
+            timeout=None,
             # verify=False
         )
         elapsed_time = time.time() - start_time
