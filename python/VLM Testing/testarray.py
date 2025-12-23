@@ -5,26 +5,10 @@ import requests
 import os
 from dotenv import load_dotenv
 from datetime import datetime
+import utils
 
 
-load_dotenv()
-api_key = os.getenv("EYEPOP_API_KEY")
-print("Using API Key:", api_key)
-
-response = requests.post(
-    "https://web-api.staging.eyepop.xyz/authentication/token",
-    headers={
-        "accept": "application/json",
-        "Content-Type": "application/json"
-    },
-    json={"secret_key": api_key}
-)
-
-if response.ok:
-    print("Token response:", response.json())
-else:
-    print("Failed to get token:", response.status_code, response.text)
-    quit()
+response = utils.get_eyepop_token()
 
 token = "Bearer " + response.json().get("access_token", "")
 

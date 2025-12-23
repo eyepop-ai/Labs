@@ -1,10 +1,12 @@
 # flake8: noqa
+import hashlib
 import requests
 import yt_dlp
 import json
 import time
 import os
 from PIL import Image
+from dotenv import load_dotenv
 
 
 def resize_image(image_path, max_size=(512, 512)):
@@ -49,6 +51,21 @@ def download_youtube_video(yt_url):
 def infer_image_description_with_file(
     image_filepath, text_prompt, token, worker_release="qwen3", max_new_tokens=500, image_size=512
 ):
+    hashOfPrompt = hashlib.sha256(text_prompt.encode()).hexdigest()
+    folder = os.path.dirname(image_filepath)
+    cache_file = os.path.join(folder+"/.vlmcache", f"{os.path.basename(image_filepath)}_{hashOfPrompt}.{worker_release}.{max_new_tokens}.{image_size}.json")
+    os.makedirs(os.path.dirname(cache_file), exist_ok=True)
+
+    print(f"Checking for cache file: {cache_file}\n")
+    if os.path.exists(cache_file):
+        print(f"Cache file found: {cache_file}\n")
+
+        try:
+            with open(cache_file, "r") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error reading cache file: {e}. Proceeding with inference request.\n")
+
     url = "https://vlm.staging.eyepop.xyz/api/v1/infer"
 
     # Bearer auth is accepted by the API security scheme
@@ -85,7 +102,20 @@ def infer_image_description_with_file(
             # verify=False
         )
         elapsed_time = time.time() - start_time
-        print(f"Inference request took {elapsed_time:.2f} seconds.")
+        print(f"Inference request took {elapsed_time:.2f} seconds.\n")
+
+    # test for response status
+    if response.status_code != 200:
+        print(f"Error: Received status code {response.status_code}")
+        print(f"Response: {response.text}")
+        quit()
+
+    
+    with open(cache_file, "w") as f:
+        f.write(response.text)
+        print(f"Saved response to cache file: {cache_file}\n")
+
+    
 
     return response.json()
 
@@ -273,3 +303,26 @@ categories = {
     },
     "Other": {"items": ["keys", "extra parts", "engine bay", "undercarriage"]},
 }
+
+
+def get_eyepop_token():
+    load_dotenv()
+    api_key = os.getenv("EYEPOP_API_KEY")
+    print("Using API Key:", api_key,"\n\n")
+
+    response = requests.post(
+        "https://web-api.staging.eyepop.xyz/authentication/token",
+        headers={
+            "accept": "application/json",
+            "Content-Type": "application/json"
+        },
+        json={"secret_key": api_key}
+    )
+
+    if response.ok:
+        print("Token response:", response.json())
+        token = "Bearer " + response.json().get("access_token", "")
+        return token
+    else:
+        print("Failed to get token:", response.status_code, response.text)
+        quit()
