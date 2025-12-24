@@ -56,52 +56,13 @@ def process_images_in_folder(image_files, text_prompt, token, worker_release, ha
             for key, value in cat_info.items():
                 categories[cat_name][key] = value
 
-        # cache_dir = os.path.join(os.path.dirname(image_path), ".vlmcache")
-        # os.makedirs(cache_dir, exist_ok=True)
-        # image_filename = os.path.basename(image_path)
-        # json_path = os.path.join(
-        #     cache_dir,
-        #     f"{image_filename}.{worker_release}.{hashOfPrompt}.json"
-        # )
-
-        # CHECK FOR CACHED RESULT (JSON)
-        # print(f"JSON Cache Path: {json_path}")
-        # if(os.path.exists(json_path)):
-        #     print("Found cached result, loading...")
-        #     with open(json_path, "r") as f:
-        #         result = json.load(f)
-        #     print("Loaded result from cache.")
-        #     print("--------------------")
-        #     if ( isinstance(result, dict) and (
-        #         (isinstance(result.get("detail"), str) and result.get("detail") == "Token expired") or
-        #         (isinstance(result.get("detail"), str) and result.get("detail").startswith("Internal server error")) or
-        #         (isinstance(result.get("detail"), str) and result.get("detail").startswith("Missing or invalid authentication"))
-        #     )):
-        #         #  delete the cached file
-        #         os.remove(json_path)
-        #         print("Deleted cached file due to token expiration.")
-
-        # IF NO CACHED RESULT, RUN INFERENCE
-        # if not os.path.exists(json_path):
-        #     if(image_path is None):
-        #         print("empty image path, skipping...")
-        #         continue
-
-        #     try:
-                
-        #         print("MAX NEW TOKENS:", max_new_tokens)
-        #         result = utils.infer_image_description_with_file(
-        #             image_path, text_prompt, token, worker_release=worker_release, max_new_tokens=max_new_tokens, image_size=image_size
-        #         )
-        #     except Exception as e:
-        #         print("Inference error:", e)
-        #         wrong_answers += 1
-        #         continue
-        # else:
-        #     with open(json_path, "r") as f:
-        #         result = json.load(f)
-        #     print("Loaded result from cache.")
-        #     print("--------------------")
+        image_filename = os.path.basename(image_path)
+        cache_dir = os.path.join(os.path.dirname(image_path), ".vlmcache")
+        os.makedirs(cache_dir, exist_ok=True)
+        json_path = os.path.join(
+            cache_dir,
+            f"{image_filename}.{worker_release}.{hashOfPrompt}.json"
+        )
 
         print("MAX NEW TOKENS:", max_new_tokens)
         result = utils.infer_image_description_with_file(
@@ -112,10 +73,6 @@ def process_images_in_folder(image_files, text_prompt, token, worker_release, ha
             print("Invalid result type, skipping image.")
             wrong_answers += 1
             continue
-
-        # print("Result Output: <-->")
-        # print(result)
-        # print("</-->")
 
         raw_output = result.get("raw_output", "")
         if not raw_output:
@@ -141,22 +98,7 @@ def process_images_in_folder(image_files, text_prompt, token, worker_release, ha
         print("Full Result Dict:")
         print(json.dumps(result, indent=2, default=str))
 
-        # Save result to resized_json_path only if not token expired
-        if not (
-            isinstance(result, dict) and (
-                result.get("detail") == "Token expired" or
-                (isinstance(result.get("detail"), str) and result.get("detail").startswith("Internal server error")) or
-                (isinstance(result.get("detail"), str) and result.get("detail").startswith("Missing or invalid authentication"))
-            )
-        ):
-            with open(json_path, "w") as f:
-                json.dump(result, f, indent=2, default=str)
-
-            
-        else:
-            print("Token expired or internal server error detected, not saving to cache.")
-            quit()
-        
+       
         # trim whitespace and punctuation from raw_output
         answer = raw_output.strip().strip(".").lower()
         print(f"Final Answer: {answer} vs Expected: {expected_result}")

@@ -8,9 +8,7 @@ from datetime import datetime
 import utils
 
 
-response = utils.get_eyepop_token()
-
-token = "Bearer " + response.json().get("access_token", "")
+token = utils.get_eyepop_token()
 
 with open('./results/testarray.csv', newline='') as csvfile:
     reader = csv.DictReader(csvfile)
