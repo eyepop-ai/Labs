@@ -13,11 +13,12 @@ import requests
 
 # Document mode
 # max_new_tokens = 500
-# image_size = 1024
+image_size = 1024
 
 # regular mode
 max_new_tokens = 5
-image_size = 512
+# image_size = 512
+# image_size = 640
 
 
 def save_and_parse_json_raw_output(raw_output, image_filename, worker_release, hashOfPrompt):
@@ -44,6 +45,8 @@ def save_and_parse_json_raw_output(raw_output, image_filename, worker_release, h
 def process_images_in_folder(image_files, text_prompt, token, worker_release, hashOfPrompt, expected_result, should_copy_files_to_predicted_folders):
     correct_answers = 0
     wrong_answers = 0   
+    stats_input_tokens = 0
+    stats_output_tokens = 0
 
     for image_path in image_files:
         start_time = time.time()
@@ -80,6 +83,16 @@ def process_images_in_folder(image_files, text_prompt, token, worker_release, ha
             wrong_answers += 1
             continue
 
+        input_tokens = 0
+        output_tokens = 0
+        run_info = result.get("run_info", {})
+        if run_info:
+            input_tokens = run_info.get("input_tokens", 0)
+            output_tokens = run_info.get("output_tokens", 0)
+            print(f"Input Tokens: {input_tokens}, Output Tokens: {output_tokens}, Total Tokens: {input_tokens + output_tokens}")
+            stats_input_tokens += input_tokens
+            stats_output_tokens += output_tokens
+        
         save_and_parse_json_raw_output(raw_output, image_filename, worker_release, hashOfPrompt)
 
         # Extract JSON object from raw_output

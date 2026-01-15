@@ -114,6 +114,24 @@ def infer_image_description_with_file(
         )
         elapsed_time = time.time() - start_time
         print(f"Inference request took {elapsed_time:.2f} seconds.\n")
+    
+    if response.status_code == 202:
+        # The API returned 202 Accepted, which means the request is being processed asynchronously.
+        # You need to poll the status endpoint until the result is ready.
+        # The response should contain a "request_id" to poll.
+        
+
+        try:
+            request_id = response.json().get("request_id")
+        except Exception as e:
+            print(f"Error extracting request_id from response: {e}")
+            quit()
+
+        if not request_id:
+            print("No request_id found in 202 response.")
+            quit()
+
+        response = poll_for_result(request_id, headers)
 
     # test for response status
     if response.status_code != 200:
@@ -129,6 +147,28 @@ def infer_image_description_with_file(
     
 
     return response.json()
+
+def poll_for_result(request_id, headers):
+    poll_url = f"https://vlm.staging.eyepop.xyz/api/v1/requests/{request_id}?timeout=20"
+    print(f"Polling for result at: {poll_url}")
+
+    while True:
+        poll_response = requests.post(
+            poll_url,
+            headers=headers,
+            data="",  # No body needed
+            timeout=None,
+        )
+        if poll_response.status_code == 200:
+            return poll_response
+        elif poll_response.status_code == 202:
+            print("Result not ready yet, waiting...")
+            time.sleep(.2)
+            continue
+        else:
+            print(f"Error polling for result: {poll_response.status_code}")
+            print(f"Response: {poll_response.text}")
+            quit()
 
 
 def infer_image_description(

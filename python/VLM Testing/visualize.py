@@ -9,9 +9,13 @@ from matplotlib.widgets import Button as MplButton
 import sys
 
 
-hashOfPrompt = "qwen3-instruct.5818ffa9e718b31ed62947e49dfbfba3bb01fd6b8c64c6353ef2977d7b6db424"
+# hashOfPrompt = "qwen3-instruct.5818ffa9e718b31ed62947e49dfbfba3bb01fd6b8c64c6353ef2977d7b6db424"
+hashOfPrompt = "qwen3-instruct.ce10acf245418f722c5816c9491f64f690510bf534e3efddbd71b14a609d3947"
+
 # main_folder = "./images/carsandbids/data/"
-main_folder = "./results/images_predicted/5818ffa9e718b31ed62947e49dfbfba3bb01fd6b8c64c6353ef2977d7b6db424"
+# main_folder = "./results/images_predicted/5818ffa9e718b31ed62947e49dfbfba3bb01fd6b8c64c6353ef2977d7b6db424"
+main_folder = "./images/carsandbids/title_examples/"
+
 # visualize_only_errors = True
 visualize_only_errors = False
 
@@ -70,8 +74,17 @@ def show_image_and_handle_action(image_filepath, folder, answer, main_folder, vi
 
 
 
-for folder in folders:    
-    vlmcachefolder = main_folder + folder + "/.vlmcache"
+for folder in folders:
+
+    vlmcachefolder = ""
+    image_folder = ""
+    if folder==".vlmcache":
+        vlmcachefolder = main_folder + ".vlmcache"
+        image_folder = main_folder
+    else:
+        vlmcachefolder = main_folder + folder + "/.vlmcache"
+        image_folder = main_folder + folder
+
     print(f"Folder: {vlmcachefolder}")
 
     # get the cached results that have hashOfPrompt in their filename
@@ -80,9 +93,9 @@ for folder in folders:
     for json_file in relevant_files:
         print(f"Found JSON file: {json_file}")
         json_filepath = os.path.join(vlmcachefolder, json_file)
-        image_filepath = main_folder + folder + "/" + json_file.rsplit(f".{hashOfPrompt}.json", 1)[0]
+        image_filepath = image_folder + "/" + json_file.rsplit(f".{hashOfPrompt}.json", 1)[0]
         print(f"Corresponding image file: {image_filepath}")
-        print(f"Location of image: {main_folder + folder}/")
+        print(f"Location of image: {image_folder}/")
 
         with open(json_filepath, "r") as file:
             content = file.read()
