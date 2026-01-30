@@ -236,7 +236,7 @@ def infer_video_description(
     }
 
     # print("Sending inference request...")
-    # print (infer_request)
+    print (infer_request)
 
     start_time = time.time()
     response = requests.post(
@@ -247,6 +247,25 @@ def infer_video_description(
     )
     elapsed_time = time.time() - start_time
     print(f"Inference request took {elapsed_time:.2f} seconds.")
+
+    if response.status_code == 202:
+        # The API returned 202 Accepted, which means the request is being processed asynchronously.
+        # You need to poll the status endpoint until the result is ready.
+        # The response should contain a "request_id" to poll.
+        
+
+        try:
+            request_id = response.json().get("request_id")
+        except Exception as e:
+            print(f"Error extracting request_id from response: {e}")
+            quit()
+
+        if not request_id:
+            print("No request_id found in 202 response.")
+            quit()
+
+        response = poll_for_result(request_id, headers)
+
 
     return response.json()
 
@@ -377,3 +396,27 @@ def get_eyepop_token():
     else:
         print("Failed to get token:", response.status_code, response.text)
         quit()
+
+def get_eyepop_token_compute():
+    load_dotenv()
+    api_key = os.getenv("EYEPOP_API_KEY")
+    print("Using API Key:", api_key,"\n\n")
+
+    response = requests.post(
+        'https://compute.staging.eyepop.xyz/v1/auth/authenticate',
+        headers={
+            "accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + api_key
+        }
+    )
+
+    if response.ok:
+        print("Token response:", response.json())
+        token = "Bearer " + response.json().get("access_token", "")
+        return token
+    else:
+        print("Failed to get token:", response.status_code, response.text)
+        quit()
+
+

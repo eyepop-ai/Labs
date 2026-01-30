@@ -36,8 +36,60 @@ load_dotenv()
 
 # ----------------------------- Configuration ------------------------------
 
-ASSET_UUID = "0697932e34e777ac800063e02ecbd16a" # Novohealth super crop station 1
-#ASSET_UUID = "069790b723297cb380005cc2bb7b3d46" # IONSport trimmed
+configurations = [
+    {
+        "name": "Novohealth super crop station 1",
+        "ASSET_UUID": "0697932e34e777ac800063e02ecbd16a",
+        "ABILITY_UUID": "06979357288a768f800023914c496848",
+        "ABILITY": {
+            "uuid": "06979357288a768f800023914c496848",
+            "name": "andystaging.find-event.novohealth.station1",
+            "worker_release": "qwen3-instruct",
+            "text_prompt": "Analyze the following video segment description. Determine whether a human operator is actively loading a sheet into an industrial ironing or feeding machine.\n\nRespond with Loading only if the operator is clearly placing, inserting, or feeding a sheet or flat linen into the machine’s intake conveyor belt.\n\nRespond NO if the operator is removing items, sorting finished laundry, handling output, repositioning items away from the machine, standing idle, or performing any action other than loading the machine.\n\nReturn only Loading or NO.",
+            "transform_into": {"classes": ["loading"]},
+            "config": {"max_new_tokens": 200, "image_size": 512, "fps": 2},
+            "alias_entries": [
+                {"alias": "andystaging.find-event.novohealth.station1", "tag": "1.0.0"}
+            ],
+        },
+    },
+    {
+        "name": "IONSport trimmed",
+        "ASSET_UUID": "069790b723297cb380005cc2bb7b3d46",
+        "ABILITY_UUID": "",
+        "ABILITY": {
+            "uuid": "069791295dd67af280007a59fa1cf8af",
+            "name": "andystaging.find-event.intennse",
+            "account_uuid": "49326f2e085a46c39ba73f91c52e436c",
+            "worker_release": "qwen3-instruct",
+            "text_prompt": "You are a video broadcast segment classifier for tennis.\n\nYou will be given a short video clip. Classify the clip into exactly ONE of the following labels:\n\n1) live_point\n2) serve_prep\n3) point_end\n\nReturn ONLY the single best label (exactly as written above). No explanations, no extra words, no punctuation.\n\nIf a coach or commentary is on the screen, ignore them and focus on gameplay only\n\nDecision rules (choose the most dominant state in the clip):\n\n1) live_point\nChoose if the ball is actively in play: players are rallying, hitting/returning shots, or clearly in the middle of a point. Continuous athletic movement and court action. (Not just a serve toss or pre-serve bounces.)\n\n2) serve_prep\nChoose if the server is preparing to serve and the point has not started: ball bouncing routine, stance setting, toss setup, receiver waiting, stillness before contact. If the clip shows the moment right before a serve (or the serve motion beginning) and no rally yet, use serve_prep.\n\n3) point_end\nChoose if the point has just ended and the clip is dominated by immediate reaction and the result: players stop play, react (celebrate/frustration), ball is dead/out, umpire calls score, quick reset begins. If the “end of point” moment is the focus, use point_end.\n\nTie-breakers (when multiple labels seem plausible):\n- If ball is clearly in play, choose live_point.\n- If the serve has not been struck and server routine dominates, choose serve_prep.\n- If the point has just ended and reactions/score-call dominate, choose point_end.",
+            "transform_into": {"classes": ["live_point", "serve_prep", "point_end"]},
+            "config": {"max_new_tokens": 200, "image_size": 512, "fps": 3},
+            "alias_entries": [
+                {"alias": "andystaging.find-event.intennse", "tag": "1.0.0"}
+            ],
+        },
+    },
+    {
+        "name": "VLM Workshop#2",
+        "ASSET_UUID": "069794fb318e74d48000ffc19b0734ba",
+        "ABILITY_UUID": "",
+        "ABILITY": {},
+        "source_of_interest": "",
+    }
+]
+
+index = 0  # Change this index to select different configurations
+ASSET_UUID = configurations[index]["ASSET_UUID"]
+ABILITY_UUID = configurations[index]["ABILITY_UUID"]
+ability = configurations[index]["ABILITY"]
+text_prompt = ability["text_prompt"]
+# source_of_interest = "ep_evaluate:ef571fe56acd372248fe67a74c573df0"
+source_of_interest = "ep_evaluate:89b232128ad0861dfa8539d9f795d9c4"
+# source_of_interest = None
+
+print(f"Selected configuration: {configurations[index]['name']}")
+print(text_prompt)
 
 ACCOUNT_UUID = "49326f2e085a46c39ba73f91c52e436c"
 
@@ -116,26 +168,29 @@ def _find_annotation_predictions(
     *,
     annotation_type: str | None = None,
     auto_annotate: str | None = None,
+    source_of_interest: str | None = None,
 ) -> List[PredictionDict]:
     """Extract a prediction list from asset['annotations'] based on selector criteria."""
-    
+
     annotations = asset.get("annotations") or []
     if not isinstance(annotations, list):
-        raise TypeError(f"asset['annotations'] must be a list, got {type(annotations)!r}")
+        raise TypeError(
+            f"asset['annotations'] must be a list, got {type(annotations)!r}"
+        )
 
     for ann in annotations:
         if annotation_type is not None and ann.get("type") != annotation_type:
             continue
         if auto_annotate is not None and ann.get("auto_annotate") != auto_annotate:
             continue
+        if source_of_interest is not None and ann.get("source") != source_of_interest:
+            continue
 
         preds = ann.get("predictions")
         if isinstance(preds, list):
             return preds
 
-    selector = (
-        f"type={annotation_type!r}" if annotation_type is not None else ""
-    )
+    selector = f"type={annotation_type!r}" if annotation_type is not None else ""
     if auto_annotate is not None:
         selector = f"{selector} auto_annotate={auto_annotate!r}".strip()
 
@@ -233,6 +288,7 @@ def _asset_to_dict(asset_obj: Any) -> Dict[str, Any]:
 
 # --------- SRT/Overlay helpers ----------
 
+
 def _require_cmd(cmd_name: str) -> str:
     path = shutil.which(cmd_name)
     if not path:
@@ -326,10 +382,14 @@ def write_predictions_onto_video(
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    srt_path = output_dir / f"{asset_uuid}_labels_{str(segment_secs).replace('.', 'p')}.srt"
+    srt_path = (
+        output_dir / f"{asset_uuid}_labels_{str(segment_secs).replace('.', 'p')}.srt"
+    )
     write_segment_overlay_srt(rows, segment_secs=segment_secs, out_srt_path=srt_path)
 
-    out_video_path = output_dir / f"{asset_uuid}_overlay_{str(segment_secs).replace('.', 'p')}.mp4"
+    out_video_path = (
+        output_dir / f"{asset_uuid}_overlay_{str(segment_secs).replace('.', 'p')}.mp4"
+    )
 
     # Burn subtitles into the video.
     # We keep audio as-is, and re-encode video for the overlay.
@@ -340,7 +400,13 @@ def write_predictions_onto_video(
         "-i",
         str(input_video_path),
         "-vf",
-        f"subtitles={str(srt_path)}",
+        (
+            f"subtitles={str(srt_path)}:"
+            "force_style='"
+            "Alignment=6,MarginV=40,MarginL=0,MarginR=0,FontSize=18,"
+            "PrimaryColour=&H0000ffff,BorderStyle=3"
+            "'"  # Outline=2,BorderStyle=3
+        ),
         "-c:a",
         "copy",
         str(out_video_path),
@@ -386,6 +452,7 @@ async def fetch_asset(
     print(type(asset_obj))
     return _asset_to_dict(asset_obj)
 
+
 async def download_video(
     *,
     api_key: str,
@@ -415,8 +482,6 @@ async def download_video(
         print(f"Downloaded video to {video_path}")
         return video_path
 
-    
-
 
 # --------------------------------- Main -----------------------------------
 
@@ -425,6 +490,7 @@ async def main() -> int:
     try:
         api_key = _require_env("EYEPOP_API_KEY")
 
+        
         asset = await fetch_asset(
             api_key=api_key,
             account_uuid=ACCOUNT_UUID,
@@ -444,10 +510,13 @@ async def main() -> int:
                 f"Asset has invalid original_duration: {asset.get('original_duration')!r}"
             )
 
-        ground_truth = _find_annotation_predictions(asset, annotation_type="ground_truth")
+        ground_truth = _find_annotation_predictions(
+            asset, annotation_type="ground_truth"
+        )
         predictions = _find_annotation_predictions(
             asset,
             auto_annotate=AUTO_ANNOTATE_KEY,
+            source_of_interest=source_of_interest,
         )
 
         rows = build_rows(

@@ -8,7 +8,7 @@ from datetime import datetime
 import utils
 
 
-token = utils.get_eyepop_token()
+token = utils.get_eyepop_token_compute()
 
 with open('./results/testarray.csv', newline='') as csvfile:
     reader = csv.DictReader(csvfile)

@@ -12,11 +12,11 @@ import requests
 
 
 # Document mode
-# max_new_tokens = 500
+max_new_tokens = 500
 image_size = 1024
 
 # regular mode
-max_new_tokens = 5
+# max_new_tokens = 5
 # image_size = 512
 # image_size = 640
 
