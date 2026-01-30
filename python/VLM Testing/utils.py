@@ -412,7 +412,7 @@ def get_eyepop_token_compute():
     )
 
     if response.ok:
-        print("Token response:", response.json())
+        print("Token response:", response.json().get("access_token", "")[1:20] + "...\n")
         token = "Bearer " + response.json().get("access_token", "")
         return token
     else:

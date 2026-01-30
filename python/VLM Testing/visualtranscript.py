@@ -52,6 +52,7 @@ configurations = [
                 {"alias": "andystaging.find-event.novohealth.station1", "tag": "1.0.0"}
             ],
         },
+        "source_of_interest": "ep_evaluate:59ac94a09d5cdf43d736f2a6df0d54ed",
     },
     {
         "name": "IONSport trimmed",
@@ -85,8 +86,9 @@ ABILITY_UUID = configurations[index]["ABILITY_UUID"]
 ability = configurations[index]["ABILITY"]
 text_prompt = ability["text_prompt"]
 # source_of_interest = "ep_evaluate:ef571fe56acd372248fe67a74c573df0"
-source_of_interest = "ep_evaluate:89b232128ad0861dfa8539d9f795d9c4"
+# source_of_interest = "ep_evaluate:89b232128ad0861dfa8539d9f795d9c4"
 # source_of_interest = None
+source_of_interest = configurations[index]["source_of_interest"]
 
 print(f"Selected configuration: {configurations[index]['name']}")
 print(text_prompt)
@@ -98,7 +100,7 @@ ACCOUNT_UUID = "49326f2e085a46c39ba73f91c52e436c"
 AUTO_ANNOTATE_KEY = "ep_evaluate"
 
 # Segment duration in seconds.
-TIMESEGMENT_SECS = 0.25
+TIMESEGMENT_SECS = 0.1
 
 # Output directory (created if missing).
 TRANSCRIPT_DIR = Path("./transcripts")
