@@ -298,6 +298,7 @@ def download_video_asset(
                 f.write(chunk)
     print(f"Downloaded video to {output_path}")
 
+
 categories = {
     "Exterior": {
         "conditions": [

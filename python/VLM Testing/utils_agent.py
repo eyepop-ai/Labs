@@ -397,6 +397,42 @@ async def fetch_asset(
     print(type(asset_obj))
     return _asset_to_dict(asset_obj)
 
+async def fetch_all_assets(
+    *,
+    api_key: str,
+    account_uuid: str,
+    dataset_uuid: str,
+    eyepop_url: str = "https://compute.staging.eyepop.xyz/",
+) -> AssetDict:
+    """Fetch asset JSON using the current EyePop async DataEndpoint pattern."""
+
+    #implement 
+    # async def list_assets(
+    #         self,
+    #         dataset_uuid: str,
+    #         dataset_version: int | None = None,
+    #         include_annotations: bool = False,
+    #         inclusion_mode: AssetInclusionMode = AssetInclusionMode.annotated_only,
+    #         annotation_inclusion_mode: AnnotationInclusionMode | None = None,
+    #         include_partitions: list[str] | None = None,
+    #         include_auto_annotates: list[AutoAnnotate] | None = None,
+    #         include_sources: list[str] | None = None,
+    # ) -> list[Asset]:
+
+    async with EyePopSdk.dataEndpoint(
+        api_key=api_key,
+        account_id=account_uuid,
+        is_async=True,
+        disable_ws=False,
+        eyepop_url=eyepop_url,
+    ) as endpoint:
+        asset_objs = await endpoint.list_assets(
+            dataset_uuid=dataset_uuid,
+            include_annotations=True
+        )
+
+    # print(type(asset_objs))
+    return [_asset_to_dict(asset_obj) for asset_obj in asset_objs]
 
 def _asset_to_dict(asset_obj: Any) -> Dict[str, Any]:
     """Convert an EyePop SDK Asset (Pydantic model) into a plain dict.
@@ -597,3 +633,68 @@ def ListAbilities(api_key: str, account_id: str, eyepop_url: str):
             print(f'\t{vlm_ability.name} ({vlm_ability.uuid}): status={vlm_ability.status}, aliases=[{aliases}]')
     
 
+def fetch_dataset(api_key, account_uuid, eyepop_url, dataset_uuid):
+    with EyePopSdk.dataEndpoint(api_key=api_key, account_id=account_uuid, eyepop_url=eyepop_url) as endpoint:
+        dataset = endpoint.get_dataset(dataset_uuid)
+        return dataset
+    
+async def download_asset(
+    asset_uuid,
+    account_uuid,
+    api_key,
+    output_path,
+    eyepop_url
+):
+    # Use the async DataEndpoint so we can `await` safely.
+    async with EyePopSdk.dataEndpoint(
+        api_key=api_key,
+        account_id=account_uuid,
+        is_async=True,
+        disable_ws=False,
+        eyepop_url=eyepop_url,
+    ) as endpoint:
+        asset_obj = await endpoint.download_asset(asset_uuid)
+
+        # IMPORTANT: If the SDK returns a stream/buffer backed by the HTTP connection,
+        # we must read it *before* exiting the context manager, otherwise the
+        # connection is closed and reads will fail.
+        if isinstance(asset_obj, (bytes, bytearray)):
+            asset_bytes = bytes(asset_obj)
+        elif hasattr(asset_obj, "read"):
+            read_result = asset_obj.read()
+            if asyncio.iscoroutine(read_result) or asyncio.isfuture(read_result):
+                asset_bytes = await read_result
+            else:
+                asset_bytes = read_result
+
+            # Close if possible (sync or async)
+            try:
+                close_fn = getattr(asset_obj, "close", None)
+                if callable(close_fn):
+                    close_result = close_fn()
+                    if asyncio.iscoroutine(close_result) or asyncio.isfuture(close_result):
+                        await close_result
+            except Exception:
+                pass
+        else:
+            raise TypeError(f"Unsupported download_asset return type: {type(asset_obj)!r}")
+
+    # Normalize to raw bytes
+    if isinstance(asset_bytes, memoryview):
+        asset_bytes = asset_bytes.tobytes()
+    elif not isinstance(asset_bytes, (bytes, bytearray)):
+        raise TypeError(f"download_asset produced non-bytes payload: {type(asset_bytes)!r}")
+
+    # If output_path is a directory, append a filename
+    if os.path.isdir(output_path):
+        filename = f"{asset_uuid}.jpg"
+        file_path = os.path.join(output_path, filename)
+    else:
+        file_path = output_path
+
+    print(f"Asset {asset_uuid} downloaded successfully. Saving to {file_path}...")
+    with open(file_path, "wb") as f:
+        f.write(asset_bytes)
+    print(f"Asset saved to {file_path}")
+
+    return asset_bytes

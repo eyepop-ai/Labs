@@ -21,7 +21,14 @@ async def main():
     worker_release = "qwen3-instruct"
     max_new_tokens = 100
     image_size = 512
-    asset_uuid = "0697932e34e777ac800063e02ecbd16a"
+
+#     "ability_uuid": "06981117045a7efe800072af7a11c61a",
+#   "dataset_uuid": "06981116fdf67af980005d7609d9ac68",
+#   "video_chunk_length_ns": 500000000,
+#   "video_chunk_overlap": 0.333
+    # asset_uuid = "0697932e34e777ac800063e02ecbd16a"
+
+    asset_uuid = "069862193a1e791f8000991fde498843"
     ACCOUNT_UUID = "49326f2e085a46c39ba73f91c52e436c"
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -81,12 +88,19 @@ async def main():
     # Test the generated prompt using generictester
     results_csv = f'./results/testarray_results_{timestamp}.csv'
 
+
+
+
+    
+
     # make ability group
     # make ability
     
     # call eval flow
     # run_eval_flow(
-    # {
+    # startVlmAbilityEvaluation(vlm_ability_uuid: string, evaluate_request: EvaluateRequest): Promise<DatasetAutoAnnotate>
+
+# {
     #   "ability_uuid": "0697a74d24d97133800086fe4377925b",
     #   "dataset_uuid": "06979321e8da753080001b9bfa6c3816",
     #   "video_chunk_length_ns": 1000000000,
