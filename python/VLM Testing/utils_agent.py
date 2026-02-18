@@ -77,21 +77,21 @@ def _find_annotation_predictions(
         )
 
     for ann in annotations:
-        print(f" progress {annotations.index(ann) + 1}/{len(annotations)}")
+        # print(f" progress {annotations.index(ann) + 1}/{len(annotations)}")
         if annotation_type is not None and ann.get("type") != annotation_type:
-            print(
-                f"Skipping annotation with type {ann.get('type')}, looking for {annotation_type}"
-            )
+            # print(
+            #     f"Skipping annotation with type {ann.get('type')}, looking for {annotation_type}"
+            # )
             continue
         if auto_annotate is not None and ann.get("auto_annotate") != auto_annotate:
-            print(
-                f"Skipping annotation with auto_annotate {ann.get('auto_annotate')}, looking for {auto_annotate}"
-            )
+            # print(
+            #     f"Skipping annotation with auto_annotate {ann.get('auto_annotate')}, looking for {auto_annotate}"
+            # )
             continue
         if source_of_interest is not None and ann.get("source") != source_of_interest:
-            print(
-                f"Skipping annotation with source {ann.get('source')}, looking for {source_of_interest}"
-            )
+            # print(
+            #     f"Skipping annotation with source {ann.get('source')}, looking for {source_of_interest}"
+            # )
             continue
 
         preds = ann.get("predictions")
@@ -403,22 +403,8 @@ async def fetch_all_assets(
     account_uuid: str,
     dataset_uuid: str,
     eyepop_url: str = "https://compute.staging.eyepop.xyz/",
-) -> AssetDict:
-    """Fetch asset JSON using the current EyePop async DataEndpoint pattern."""
-
-    #implement 
-    # async def list_assets(
-    #         self,
-    #         dataset_uuid: str,
-    #         dataset_version: int | None = None,
-    #         include_annotations: bool = False,
-    #         inclusion_mode: AssetInclusionMode = AssetInclusionMode.annotated_only,
-    #         annotation_inclusion_mode: AnnotationInclusionMode | None = None,
-    #         include_partitions: list[str] | None = None,
-    #         include_auto_annotates: list[AutoAnnotate] | None = None,
-    #         include_sources: list[str] | None = None,
-    # ) -> list[Asset]:
-
+) -> list[AssetDict]:
+    """Fetch all asset JSONs using the current EyePop async DataEndpoint pattern."""
     async with EyePopSdk.dataEndpoint(
         api_key=api_key,
         account_id=account_uuid,
@@ -428,11 +414,28 @@ async def fetch_all_assets(
     ) as endpoint:
         asset_objs = await endpoint.list_assets(
             dataset_uuid=dataset_uuid,
-            include_annotations=True
+            include_annotations=True,
+            include_auto_annotates=["ep_evaluate"]
         )
-
-    # print(type(asset_objs))
     return [_asset_to_dict(asset_obj) for asset_obj in asset_objs]
+
+def fetch_all_assets_sync(
+    *,
+    api_key: str,
+    account_uuid: str,
+    dataset_uuid: str,
+    eyepop_url: str = "https://compute.staging.eyepop.xyz/",
+) -> list[AssetDict]:
+    """Synchronous wrapper for fetch_all_assets."""
+    return asyncio.run(
+        fetch_all_assets(
+            api_key=api_key,
+            account_uuid=account_uuid,
+            dataset_uuid=dataset_uuid,
+            eyepop_url=eyepop_url,
+        )
+    )
+
 
 def _asset_to_dict(asset_obj: Any) -> Dict[str, Any]:
     """Convert an EyePop SDK Asset (Pydantic model) into a plain dict.
@@ -522,13 +525,55 @@ def build_refine_prompt(fp_desc, fn_desc, og_prompt, timestamp):
     return creation_prompt
 
 
+def build_refine_prompt_image_dataset(mismatches, og_prompt, class_labels, timestamp):
+    
+
+    creation_prompt = """In the following, you will find a series of image descriptions in xml tags. The xml tag defines the class of the image and if it was correctly classified. You will also find an image classification prompt to a vlm. Your task is to create a single more accurate prompt that will allow a VLM to classify an image into it's respective classes based on the descriptions provided.
+    Ensure that the prompt is clear, concise, and covers all the necessary details to facilitate accurate classification by the VLM.
+    """
+
+    # add original prompt
+    creation_prompt += f"\n\n<original_prompt>{og_prompt}</original_prompt>\n\n"
+
+    # add mismatch info
+    creation_prompt += "\n\n<!-- Mismatch Descriptions -->\n"
+    for mismatch in mismatches:
+        creation_prompt += f'\n<image_description ground_truth="{mismatch["ground_truth"]}" prediction="{mismatch["prediction"]}">{mismatch["description"]}</image_description>'
+        
+    creation_prompt += (
+        f"\n\nThe possible output labels are: {class_labels}. "
+        "Do not include explanations, confidence scores, or additional text. "
+    )
+
+    with open(f"creation_prompt_{timestamp}.txt", "w") as f:
+        f.write(creation_prompt)
+
+    print(f"Creation prompt saved to creation_prompt_{timestamp}.txt")
+    print(creation_prompt)
+
+    return creation_prompt
+
+
+
+
 def _require_env(name: str) -> str:
     value = os.getenv(name)
     if not value:
         raise RuntimeError(f"Missing required environment variable: {name}")
     return value
 
+def find_false_positives_negatives_in_dataset(asset, predictions, ground_truth):
+    # in this function, we will compare the predictions and ground truth to find false positives and false negatives
+    # example of prediction and ground truth format:
+    # print("Comparing predictions to ground truth to identify false positives and false negatives...")
+    # print(f"Asset UUID: {asset.get('uuid') or '---'}")
+    
+    gt_class = ground_truth[0].get("classes", [{}])[0].get("classLabel")
+    pr_class = predictions[0].get("classes", [{}])[0].get("classLabel")
 
+    return gt_class, pr_class
+
+    
 def find_false_positives_negatives(predictions, ground_truth):
     false_positives = []
     false_negatives = []
@@ -595,10 +640,10 @@ def fetch_ability_info(dataset_id, source, token):
     return response.json()
 
 
-
-
-
-
+# def get_description_of_asset_image(asset_uuid, token, worker_release, max_new_tokens, image_size, fps):
+#     url = f"ai.eyepop://data/assets/{asset_uuid}?transcode_mode=original"
+    
+#     prompt = "Describe only the visual features that would help distinguish this image from images belonging to other categories. Avoid mentioning filenames, paths, or class names. Focus on what is visible and unambiguous."
 
 
 def create_ability_prototypes(alias,text_prompt, classes, max_new_tokens=5, image_size=640, fps=10) -> List[VlmAbilityCreate]:
@@ -619,11 +664,13 @@ def create_ability_prototypes(alias,text_prompt, classes, max_new_tokens=5, imag
             is_public=False
         )
 
-def ListAbilities(api_key: str, account_id: str, eyepop_url: str):
-    with EyePopSdk.dataEndpoint(api_key=api_key, account_id=account_id, eyepop_url=eyepop_url) as endpoint:
+def ListAbilities(api_key: str, account_uuid: str, eyepop_url: str):
+    with EyePopSdk.dataEndpoint(api_key=api_key, account_id=account_uuid, eyepop_url=eyepop_url) as endpoint:
         vlm_ability_groups = endpoint.list_vlm_ability_groups()
 
-        print(f'found {len(vlm_ability_groups)} active ability groups in account {account_id}')
+        print(vlm_ability_groups)
+
+        print(f'found {len(vlm_ability_groups)} active ability groups in account {account_uuid}')
         for vlm_ability_group in vlm_ability_groups:
             vlm_abilities = endpoint.list_vlm_abilities(vlm_ability_group_uuid=vlm_ability_group.uuid)
         
@@ -632,6 +679,30 @@ def ListAbilities(api_key: str, account_id: str, eyepop_url: str):
             aliases = '.'.join([f'{entry.alias}:{entry.tag}' for entry in vlm_ability.alias_entries])
             print(f'\t{vlm_ability.name} ({vlm_ability.uuid}): status={vlm_ability.status}, aliases=[{aliases}]')
     
+
+def GetAbility(api_key: str, account_uuid: str, eyepop_url: str, alias:str):
+    alias_name, alias_tag = alias.split(":")
+
+    with EyePopSdk.dataEndpoint(api_key=api_key, account_id=account_uuid, eyepop_url=eyepop_url) as endpoint:
+        vlm_ability_groups = endpoint.list_vlm_ability_groups()
+
+        # find ability group that contains the alias
+        target_ability_group = None
+        for vlm_ability_group in vlm_ability_groups:
+            # print(f'Checking ability group {vlm_ability_group.name} ({vlm_ability_group.uuid}) for alias {alias_name}...')
+            vlm_abilities = endpoint.list_vlm_abilities(vlm_ability_group_uuid=vlm_ability_group.uuid)
+            for vlm_ability in vlm_abilities:
+                for entry in vlm_ability.alias_entries:
+                    # print(f'Checking alias {entry.alias}:{entry.tag}...')
+                    if entry.alias == alias_name and entry.tag == alias_tag:
+                        target_ability_group = vlm_ability_group
+                        return entry, vlm_ability, vlm_ability_group
+                if target_ability_group:
+                    break
+            if target_ability_group:
+                break
+
+    return None, None, None
 
 def fetch_dataset(api_key, account_uuid, eyepop_url, dataset_uuid):
     with EyePopSdk.dataEndpoint(api_key=api_key, account_id=account_uuid, eyepop_url=eyepop_url) as endpoint:
