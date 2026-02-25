@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@eyepop.ai/eyepop": "^2.0.0",
+    "@eyepop.ai/eyepop": "^3.10.1",
     "@eyepop.ai/eyepop-render-2d": "^2.0.1",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.8.0",

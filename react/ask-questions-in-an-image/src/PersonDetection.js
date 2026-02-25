@@ -464,6 +464,8 @@ function HeaderBar({ onLogout }) {
         <Link to="/" style={{ color: '#1A1AFF', textDecoration: 'none', fontWeight: '600' }}>Image Q&A</Link>
         <Link to="/detect-and-ask" style={{ color: '#1A1AFF', textDecoration: 'none', fontWeight: '600' }}>Detect + Ask</Link>
         <Link to="/person-detection" style={{ color: '#1A1AFF', textDecoration: 'none', fontWeight: '600' }}>Person Detection</Link>
+        <Link to="/image-sort" style={{ color: '#1A1AFF', textDecoration: 'none', fontWeight: '600' }}>Image Sort</Link>
+        <Link to="/image-search" style={{ color: '#1A1AFF', textDecoration: 'none', fontWeight: '600' }}>Image Search</Link>
         <button onClick={onLogout} className="logout-button">Logout</button>
       </div>
     </header>

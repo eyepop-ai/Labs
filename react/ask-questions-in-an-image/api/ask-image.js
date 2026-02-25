@@ -9,14 +9,17 @@ export default async function handler(req, res) {
     const { questions, imageBase64, apiKey } = req.body;
 
     // Use the provided API key from the authenticated user
-    const secretKey = apiKey || process.env.EYEPOP_API_KEY;
+    const authKey = apiKey || process.env.EYEPOP_API_KEY;
 
-    if (!secretKey) {
+    if (!authKey) {
       return res.status(401).json({ error: "Authentication required" });
     }
 
+    const eyepopUrl = process.env.EYEPOP_URL || "https://compute.staging.eyepop.xyz";
+
     const endpoint = await EyePop.workerEndpoint({
-      auth: { secretKey },
+      auth: { apiKey: authKey },
+      eyepopUrl,
       stopJobs: false
     }).connect();
 

@@ -17,8 +17,11 @@ export default async function handler(req, res) {
 
     // Attempt to connect to EyePop with the provided credentials
     try {
+      const eyepopUrl = process.env.EYEPOP_URL || "https://compute.staging.eyepop.xyz";
+
       const endpoint = await EyePop.workerEndpoint({
-        auth: { secretKey: apiKey },
+        auth: { apiKey: apiKey },
+        eyepopUrl,
         stopJobs: false
       }).connect();
 

@@ -5,6 +5,8 @@ import './index.css';
 import App from './App';
 import DetectAndAsk from './DetectAndAsk';
 import PersonDetection from './PersonDetection';
+import ImageSort from './ImageSort';
+import ImageSearch from './ImageSearch';
 import reportWebVitals from './reportWebVitals';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -15,6 +17,8 @@ root.render(
         <Route path="/" element={<App />} />
         <Route path="/detect-and-ask" element={<DetectAndAsk />} />
         <Route path="/person-detection" element={<PersonDetection />} />
+        <Route path="/image-sort" element={<ImageSort />} />
+        <Route path="/image-search" element={<ImageSearch />} />
       </Routes>
     </Router>
   </React.StrictMode>

@@ -6,6 +6,7 @@ import Login from './Login';
 import './App.css';
 
 // Memoized detection card component for better performance
+// eslint-disable-next-line no-unused-vars
 const DetectionCard = React.memo(({ detection, detIdx }) => (
   <div 
     style={{ 
@@ -61,8 +62,8 @@ function DetectAndAsk() {
   const [state, setState] = useState('Ready');
   const [detections, setDetections] = useState([]);
   const [allDetections, setAllDetections] = useState([]);
-  const [showObjectDetections, setShowObjectDetections] = useState(true);
-  const [showQAResults, setShowQAResults] = useState(true);
+  const [showObjectDetections, setShowObjectDetections] = useState(true); // eslint-disable-line no-unused-vars
+  const [showQAResults, setShowQAResults] = useState(true); // eslint-disable-line no-unused-vars
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
   const animationFrameRef = useRef(null);
@@ -680,6 +681,8 @@ function HeaderBar({ onLogout }) {
         <Link to="/" style={{ color: '#1A1AFF', textDecoration: 'none', fontWeight: '600' }}>Image Q&A</Link>
         <Link to="/detect-and-ask" style={{ color: '#1A1AFF', textDecoration: 'none', fontWeight: '600' }}>Detect + Ask</Link>
         <Link to="/person-detection" style={{ color: '#1A1AFF', textDecoration: 'none', fontWeight: '600' }}>Person Detection</Link>
+        <Link to="/image-sort" style={{ color: '#1A1AFF', textDecoration: 'none', fontWeight: '600' }}>Image Sort</Link>
+        <Link to="/image-search" style={{ color: '#1A1AFF', textDecoration: 'none', fontWeight: '600' }}>Image Search</Link>
         <button onClick={onLogout} className="logout-button">Logout</button>
       </div>
     </header>
